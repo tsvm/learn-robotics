@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn Robotics: Joints and Degrees of Freedom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f2f3ef;
+  --panel:#fbfbf9;
+  --ink:#18212b;
+  --muted:#566170;
+  --line:#d6d9d2;
+  --accent:#0a6c74;
+  --accent-soft:#d8ecee;
+  --signal:#d9480f;
+  --ok:#1f7a4a;--ok-soft:#dff2e6;--bad:#b3261e;--bad-soft:#fbe4e1;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12171d;--panel:#1a2129;--ink:#e6ebf0;--muted:#9aa6b3;--line:#2c3640;
+    --accent:#4fc3cb;--accent-soft:#16363a;--signal:#ff8a4c;--ok:#6cd39a;--ok-soft:#173826;--bad:#ff8a80;--bad-soft:#40201e;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12171d;--panel:#1a2129;--ink:#e6ebf0;--muted:#9aa6b3;--line:#2c3640;
+  --accent:#4fc3cb;--accent-soft:#16363a;--signal:#ff8a4c;--ok:#6cd39a;--ok-soft:#173826;--bad:#ff8a80;--bad-soft:#40201e;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 16px 56px;display:flex;flex-direction:column;gap:36px}
+header{display:flex;flex-direction:column;gap:8px}
+.kicker{margin:0;font-family:var(--font-mono);font-size:13px;color:var(--muted);letter-spacing:.02em}
+h1{margin:0;font-size:clamp(34px,6vw,52px);line-height:1.05;font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+.lede{margin:0;max-width:62ch;color:var(--muted);font-size:17px}
+h2{margin:0 0 12px;font-size:22px;font-weight:600;text-wrap:balance}
+h3{margin:0;font-size:18px;font-weight:600}
+section{display:flex;flex-direction:column}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
+.chip i{width:12px;height:12px;border-radius:50%;background:var(--jc);display:block}
+.chip[aria-pressed="true"]{border-color:var(--jc);box-shadow:inset 0 0 0 1px var(--jc);font-weight:600}
+.chip:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.viewer{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:820px){.viewer{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.stage{position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:clamp(280px,62vw,400px);cursor:grab;touch-action:pan-y}
+canvas:active{cursor:grabbing}
+.stage-bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+.stage-bar label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.btn{padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.sliders{display:flex;flex-direction:column;gap:12px;padding:14px;border-top:1px solid var(--line)}
+.srow{display:grid;grid-template-columns:96px 1fr 84px;gap:10px;align-items:center;font-size:14px}
+.srow output{font-family:var(--font-mono);text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.facts{padding:18px;display:flex;flex-direction:column;gap:14px}
+.facthead{display:flex;align-items:center;gap:12px}
+.badge{min-width:40px;height:40px;padding:0 8px;border-radius:10px;background:var(--jc);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:500;font-size:18px}
+.motion{margin:0}
+.dofgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.cell{border:1px solid var(--line);border-radius:8px;padding:6px 2px;text-align:center;font-family:var(--font-mono);font-size:13px;color:var(--muted);background:transparent}
+.cell small{display:block;font-family:var(--font-body);font-size:11px}
+.cell.free{background:var(--jc);border-color:var(--jc);color:#fff}
+.cell.free small{color:#fff}
+.cell.coupled{background:var(--jc);border-color:var(--jc);color:#fff;border-style:dashed}
+.legend{margin:0;font-size:13px;color:var(--muted)}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px}
+dt{color:var(--muted)}
+dd{margin:0}
+.eq{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;font-weight:500;color:var(--muted);font-family:var(--font-mono)}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:var(--jc)}
+.note{margin:10px 0 0;color:var(--muted);font-size:14px;max-width:70ch}
+.calc{padding:18px;display:flex;flex-direction:column;gap:16px}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.preset{padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}
+.preset[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.field input,.field select{font:inherit;font-size:16px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:100%}
+.field input:disabled{opacity:.45}
+.result{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:10px;background:var(--accent-soft)}
+.result .big{font-family:var(--font-mono);font-size:clamp(20px,4.5vw,28px);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.result .warn{color:var(--signal);font-size:14px;font-weight:500}
+.formula{font-family:var(--font-mono);font-size:15px;color:var(--muted)}
+details.explain{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin:0 0 14px}
+details.explain summary{cursor:pointer;padding:10px 14px;font-weight:500;list-style:none;display:flex;gap:10px;align-items:center}
+details.explain summary::-webkit-details-marker{display:none}
+details.explain summary::before{content:"+";font-family:var(--font-mono);width:18px;text-align:center;color:var(--accent)}
+details.explain[open] summary::before{content:"\2212"}
+details.explain summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.exbody{padding:2px 16px 14px;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.exbody p,.exbody ul{margin:0}
+.exbody ul{padding-left:20px}
+.exbody .tablewrap table{min-width:0;font-size:14px}
+.exbody pre{margin:0;padding:10px 12px;background:var(--bg);border-radius:8px;font-family:var(--font-mono);font-size:15px;overflow-x:auto}
+.calc details.explain{margin:0;background:transparent}
+.quizbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-bottom:12px;font-family:var(--font-mono);font-size:14px;color:var(--muted)}
+.q{padding:16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.qtext{margin:0;font-weight:500}
+.qopts{display:flex;flex-direction:column;gap:8px}
+.qopt{text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
+.qopt:hover:not(:disabled){border-color:var(--accent)}
+.qopt:disabled{cursor:default;color:var(--ink);opacity:1}
+.qopt[data-state="right"]{background:var(--ok-soft);border-color:var(--ok)}
+.qopt[data-state="wrong"]{background:var(--bad-soft);border-color:var(--bad)}
+.qwhy{margin:0;font-size:15px}
+.qwhy strong[data-state="right"]{color:var(--ok)}
+.qwhy strong[data-state="wrong"]{color:var(--bad)}
+.act{padding:16px;display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.act p,.act ul{margin:0}
+.act ul{padding-left:20px}
+.act .tablewrap table{min-width:0;font-size:14px}
+.cellin{width:100%;min-width:72px;font:inherit;font-size:14px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.cellin.wide{min-width:220px}
+.answer{display:none;padding:10px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;font-size:15px}
+#lab.show .answer{display:block}
+.answer p+p,.answer p+.tablewrap{margin-top:8px}
+.anstoggle{display:flex;gap:8px;align-items:center;font-size:15px;cursor:pointer}
+.labintro{display:flex;flex-direction:column;gap:10px;max-width:72ch;margin-bottom:14px}
+.labintro p,.labintro ul{margin:0}
+.labintro ul{padding-left:20px}
+.printonly{display:none}
+.namefields{gap:18pt}
+.namefields span{flex:1;border-bottom:1px solid var(--muted);font-size:13px;color:var(--muted);padding-bottom:14px}
+
+.mech{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:820px){.mech{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}}
+.mechinfo{display:flex;flex-direction:column;gap:12px;font-size:15px}
+.mechinfo h3{font-size:17px}
+.mechinfo ul{margin:4px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.mechinfo li{display:flex;gap:8px;align-items:baseline}
+.jdot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--jc);transform:translateY(1px)}
+.tag{font-family:var(--font-mono);font-size:13px;color:var(--muted);flex:none}
+.mechinfo li .tag{min-width:52px}
+footer{font-size:14px;color:var(--muted);max-width:70ch}
+@media (max-width:520px){.srow{grid-template-columns:78px 1fr 70px}}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- step-by-step layout ---------- */
+.app{max-width:1040px;margin:0 auto;padding:22px 16px 0;display:flex;flex-direction:column;gap:16px;min-height:100vh}
+.top{display:flex;flex-direction:column;gap:6px}
+.top h1{font-size:clamp(28px,5vw,40px)}
+.top .lede{font-size:16px}
+.path{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 10px;scrollbar-width:thin;align-items:stretch}
+.step{display:none;flex-direction:column;gap:16px}
+.step.on{display:flex}
+.stephead{display:flex;flex-direction:column;gap:4px}
+.stephead h2{margin:0;font-size:clamp(24px,4vw,30px)}
+.stepbody{display:flex;flex-direction:column;gap:12px;max-width:72ch}
+.stepbody p,.stepbody ul,.stepbody ol{margin:0}
+.stepbody ul,.stepbody ol{padding-left:22px}
+.stepbody pre{margin:0;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-family:var(--font-mono);font-size:15px;overflow-x:auto}
+.callout{border-left:3px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:0 8px 8px 0}
+.keypoint{border-left:3px solid var(--signal);padding:2px 0 2px 14px}
+.stepbody .tablewrap table{min-width:0;font-size:14px}
+.sub{font-size:13px;color:var(--muted);font-family:var(--font-mono);margin:4px 0 -4px}
+.quizhost{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.qhead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.qhead h3{font-size:19px}
+.qresult{padding:12px 14px;border-radius:10px;background:var(--accent-soft);display:none;flex-direction:column;gap:8px}
+.qresult .row{display:flex;flex-wrap:wrap;gap:8px}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.pager{position:sticky;bottom:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;margin-top:auto;background:var(--bg);border-top:1px solid var(--line)}
+.pager .btn{padding:9px 18px;font-size:15px}
+#where{font-family:var(--font-mono);font-size:13px;color:var(--muted);text-align:center}
+.pdots{display:flex;flex-wrap:wrap;gap:6px}
+.pdots button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-family:var(--font-mono);font-size:13px;cursor:pointer}
+.pdots button[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+.pdots button.right{border-color:var(--ok);background:var(--ok-soft)}
+.pdots button.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.pitem{display:none;flex-direction:column;gap:12px}
+.pitem.on{display:flex}
+.pitem .mechinfo{padding:2px 0}
+.qwhy .mechinfo{margin-top:10px}
+.qwhy ul{margin:4px 0 0;padding-left:20px}
+.pfigs{display:flex;flex-direction:column;gap:10pt}
+.printkey{display:none}
+footer{padding:10px 0 18px}
+.mechslot .stage{max-width:640px}
+
+.top h1{font-size:clamp(26px,4.4vw,38px)}
+footer h4{margin:10px 0 2px;font-size:13px;font-family:var(--font-mono);font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+footer p{margin:0}
+/* visual map of the steps */
+.pathwrap{display:flex;flex-direction:column;gap:6px}
+.progress{display:flex;align-items:center;gap:12px;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.progress .bar{flex:1;height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+.progress .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.path{display:flex;gap:22px;overflow-x:auto;padding:6px 4px 12px;align-items:flex-start;scrollbar-width:thin}
+.mgroup{flex:none;display:flex;flex-direction:column;gap:8px}
+.mtitle{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:var(--font-mono)}
+.mnodes{display:flex}
+.node{flex:none;position:relative;width:84px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer}
+.node::before{content:"";position:absolute;top:17px;left:-50%;width:100%;height:3px;background:var(--line);z-index:0}
+.node:first-child::before{display:none}
+.node.visited::before{background:var(--nc)}
+.dotc{position:relative;z-index:1;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--nc);background:var(--panel);color:var(--nc);font-family:var(--font-mono);font-weight:600;font-size:15px;transition:transform .15s}
+.node.done .dotc{background:var(--nc);color:#fff}
+.node.done .dotc b{display:none}
+.node.done .dotc::after{content:"\2713";font-size:17px}
+.node[aria-current="step"] .dotc{box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--nc);transform:scale(1.1)}
+.node:hover .dotc{transform:scale(1.08)}
+.lbl{font-size:12px;line-height:1.2;text-align:center;color:var(--muted);max-width:80px}
+.node[aria-current="step"] .lbl{color:var(--ink);font-weight:600}
+.pips{display:flex;gap:3px}
+.pips i{width:15px;height:5px;border-radius:3px;background:var(--line)}
+.pips i.on{background:var(--nc)}
+.pips i.cur{box-shadow:0 0 0 1.5px var(--ink)}
+.node:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:8px}
+/* two screens per step: the lesson, then its quiz */
+.part{display:flex;flex-direction:column;gap:16px}
+.step.two.p0 .qpart{display:none}
+.step.two.p1 .learn{display:none}
+.qintro{max-width:72ch}
+/* each page is a rounded rectangle card */
+body{background:#e9ebe6}
+.pathwrap{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:12px 18px 4px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.step.on{background:var(--panel);border:1px solid var(--line);border-radius:28px;padding:clamp(18px,4vw,36px);box-shadow:0 2px 4px rgba(0,0,0,.04),0 12px 32px rgba(20,30,40,.08)}
+.step .learn,.step .qpart{display:flex;flex-direction:column;gap:16px}
+.step.two.p0 .qpart,.step.two.p1 .learn{display:none}
+.step .stephead{padding-bottom:12px;border-bottom:1px solid var(--line)}
+.step .viewer,.step .stage,.step .calc,.step .mech,.step .callout,.step .keypoint,.step .q{border-radius:18px}
+.pager{border:1px solid var(--line);border-radius:999px;padding:10px 12px 10px 12px;margin:0 0 12px;bottom:12px;background:var(--panel);box-shadow:0 6px 20px rgba(20,30,40,.12)}
+.pager .btn{border-radius:999px}
+.qopt{border-radius:14px}
+footer{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:16px 20px;margin-bottom:16px}
+
+/* ---- print layout: A4 handout, every step in order, quizzes with lettered options ---- */
+@media print{
+  @page{size:A4;margin:14mm 13mm 16mm}
+  :root,:root[data-theme="dark"],:root[data-theme="light"],:root:not([data-theme="light"]){
+    --bg:#ffffff;--panel:#ffffff;--ink:#14181f;--muted:#4a525e;--line:#c4c8cf;--accent:#0a6c74;--accent-soft:#e7f3f4;
+    --ok:#1f7a4a;--ok-soft:#dff2e6;--bad:#b3261e;--bad-soft:#fbe4e1;--signal:#d9480f;color-scheme:light;
+  }
+  html,body{background:#fff}
+  body{font-size:10.5pt;line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .app{max-width:none;padding:0;gap:10pt;min-height:0}
+  .pathwrap,.path,.pager,.chips,.viewer,#shared,.anstoggle,.qresult,.pdots,.noprint,.stage{display:none!important}
+  .printonly{display:block}
+  .namefields{display:flex!important;margin-top:10pt}
+  .namefields span{font-size:9pt;padding-bottom:12pt}
+  .top{border-bottom:2px solid var(--accent);padding-bottom:10pt}
+  h1{font-size:28pt}
+  h2{font-size:17pt;color:var(--accent);margin:0 0 4pt;break-after:avoid}
+  h3{break-after:avoid;font-size:12.5pt}
+  body{background:#fff!important}
+  .step,.step.on{background:none!important;border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important}
+  footer{border:0!important;border-radius:0!important;padding:10pt 0!important}
+  .step{display:flex!important;break-before:auto;gap:8pt;margin-top:10pt}
+  .stephead,.stepbody{break-after:avoid}
+  .stepbody{break-inside:avoid}
+  .step.grp{break-before:page;margin-top:0}
+  .step.first{break-before:auto}
+  .step.two .learn,.step.two .qpart{display:block!important}
+  .stepbody{max-width:none;gap:7pt}
+  .callout,.keypoint{break-inside:avoid}
+  .pitem{display:flex!important;break-inside:avoid;gap:6pt;margin-bottom:8pt}
+  .pcard,.act,.q,tr,.tablewrap,.pitem{break-inside:avoid}
+  .pcard{display:grid;grid-template-columns:1.15fr 1fr;gap:12pt;border:1px solid var(--line);border-radius:8pt;padding:10pt;margin-bottom:8pt;align-items:start}
+  .pcard.small{grid-template-columns:1fr 1.1fr;padding:5pt;margin-bottom:5pt}
+  .pcard.small .pfacts{font-size:9pt;gap:3pt}
+  .pcard.small .pfacts .legend{display:none}
+  .pitem .pfig{max-width:64%}
+  .pitem .sub{margin:2pt 0 0}
+  .q{break-inside:avoid}
+  .pfig canvas{width:100%;height:auto;display:block}
+  .pfacts{display:flex;flex-direction:column;gap:6pt;font-size:10pt}
+  .pfacts p,.pfacts ul{margin:0}
+  .pfacts .tag{font-size:8.5pt}
+  .pfacts .dofgrid{gap:3pt}
+  .pfacts .cell{font-size:8.5pt;padding:3pt 1pt}
+  .pfacts .cell small{font-size:6.5pt}
+  .pfacts dl{font-size:9.5pt;gap:3pt 8pt}
+  .pfacts .eq{font-size:9.5pt}
+  .pfacts .legend{font-size:8pt}
+  .act{padding:10pt;margin-bottom:9pt;gap:7pt}
+  .cellin{height:24pt;border:1px solid #8a919c;background:#fff}
+  .cellin.wide{height:36pt}
+  .tablewrap{border:1px solid var(--line)}
+  .answer{break-inside:avoid}
+  .quizhost{gap:6pt;margin-top:4pt}
+  .qhead h3{margin-top:4pt}
+  .q{padding:5pt 9pt;margin-bottom:4pt;gap:2pt}
+  .qopts{gap:2pt;counter-reset:o}
+  .qopt{counter-increment:o;border:none;padding:1.5pt 0;background:none;font-size:10pt}
+  .qopt::before{content:counter(o,upper-alpha) ")";display:inline-block;width:20pt;font-family:var(--font-mono)}
+  .qopt[data-state]{background:none!important;border:none!important}
+  .qwhy{display:none}
+  .printkey{display:block;margin-top:6pt;padding:6pt 10pt;border:1px dashed var(--muted);font-size:9.5pt;break-inside:avoid}
+  .printkey ol{margin:2pt 0 0;padding-left:18pt}
+  body:not(.answers) .printkey{display:none}
+  .calc,.mech{display:none!important}
+  details.explain{border:1px solid var(--line);margin-bottom:6pt;break-inside:avoid}
+  details.explain summary{font-weight:600;padding:5pt 10pt}
+  details.explain summary::before{display:none}
+  .exbody{padding:0 10pt 8pt;max-width:none}
+  footer{border-top:1px solid var(--line);padding-top:6pt;font-size:9pt}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>Learn Robotics: Joints and Degrees of Freedom</h1>
+    <p class="lede">From degrees of freedom to counting them in whole robots. Work through the steps in order. Each one ends with a short quiz, and you can jump to any step at any time.</p>
+    <div class="printonly namefields"><span>Name</span><span>Pair</span><span>Date</span></div>
+  </header>
+  <div class="pathwrap">
+    <div class="progress"><span id="progtxt"></span><div class="bar"><i id="progbar"></i></div></div>
+    <nav class="path" id="path" aria-label="Steps"></nav>
+  </div>
+  <main id="steps"></main>
+  <div class="pager" id="pager">
+    <button class="btn" id="back" type="button">Back</button>
+    <span id="where"></span>
+    <button class="btn primary" id="next" type="button">Next</button>
+  </div>
+  <footer>
+    <p>Made by Tsvetomila Mihaylova and Claude.</p>
+    <h4>References</h4>
+    <p>K. M. Lynch and F. C. Park, <em>Modern Robotics: Mechanics, Planning, and Control</em>, Cambridge University Press, 2017. Chapter 2, Configuration Space.</p>
+  </footer>
+</div>
+
+<!-- shared interactive pieces: moved into the step that needs them -->
+<div id="shared" hidden>
+  <div class="chips" id="chips"></div>
+  <div class="viewer" id="jointViewer">
+    <div class="card stage">
+      <canvas id="cv" role="img" aria-label="3D view of the selected joint. Drag to rotate the view."></canvas>
+      <div class="sliders" id="sliders"></div>
+      <div class="stage-bar">
+        <span>Drag the picture to rotate the view</span>
+        <span style="display:flex;gap:14px;align-items:center">
+          <label><input type="checkbox" id="axes" checked> Show joint axes</label>
+          <button class="btn" id="reset" type="button">Reset view</button>
+        </span>
+      </div>
+    </div>
+    <div class="card facts" id="facts"></div>
+  </div>
+
+  <div class="card calc" id="calcBox">
+    <div class="presets" id="presets"></div>
+    <div class="mech" id="mechGrid">
+      <div class="card stage" id="mechStage">
+        <canvas id="cv2" role="img" aria-label="3D diagram of the selected mechanism. Drag to rotate the view."></canvas>
+        <div class="sliders" id="msliders"></div>
+        <div class="stage-bar">
+          <span id="mnote">Drag the picture to rotate the view</span>
+          <button class="btn" id="mreset" type="button">Reset view</button>
+        </div>
+      </div>
+      <div class="mechinfo" id="mechinfo"></div>
+    </div>
+    <div class="inputs" id="inputs"></div>
+    <div class="result" id="result" aria-live="polite"></div>
+  </div>
+
+  <div class="tablewrap" id="kitBox">
+    <table>
+      <thead><tr><th>Joint</th><th>DoF f</th><th>Constraints (space)</th><th>Allowed in the plane</th><th>Suggested qty</th><th>Printed as</th></tr></thead>
+      <tbody id="kittable"></tbody>
+    </table>
+  </div>
+
+  <div id="lab">
+    <div class="labintro">
+      <p>This lab takes about two hours in pairs. By the end you can name the six basic joints, count the degrees of freedom (DoF) of a mechanism with a formula, and check your count on a mechanism you built yourself.</p>
+      <p>Your kit holds printed joints (revolute, prismatic, helical, cylindrical, universal, spherical), links with holes every 10 mm, and a base plate. Work through the activities in order. Each one asks you to predict first, then build, then compare.</p>
+      <ul>
+        <li>Write your answers in the boxes, or in your own notes. The boxes are not saved when you close the page.</li>
+        <li>Printed joints have a little play. Ignore the play when you count DoF.</li>
+        <li>When your prediction and your observation disagree, do not erase either one. Write down why.</li>
+      </ul>
+      <label class="anstoggle"><input type="checkbox" id="showAns"> Show instructor answers</label>
+    </div>
+    <div id="labs"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- small vector and transform helpers ---------- */
+var D2R=Math.PI/180;
+function add(a,b){return [a[0]+b[0],a[1]+b[1],a[2]+b[2]];}
+function sub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function norm(a){var l=Math.sqrt(dot(a,a))||1;return [a[0]/l,a[1]/l,a[2]/l];}
+function mulv(R,p){return [R[0]*p[0]+R[1]*p[1]+R[2]*p[2],R[3]*p[0]+R[4]*p[1]+R[5]*p[2],R[6]*p[0]+R[7]*p[1]+R[8]*p[2]];}
+function mul3(A,B){
+  var C=new Array(9),i,j;
+  for(i=0;i<3;i++){for(j=0;j<3;j++){C[i*3+j]=A[i*3]*B[j]+A[i*3+1]*B[3+j]+A[i*3+2]*B[6+j];}}
+  return C;
+}
+/* rotation matrix about an axis by an angle in degrees (Rodrigues) */
+function rot(axis,deg){
+  var n=norm(axis),x=n[0],y=n[1],z=n[2],a=deg*D2R,c=Math.cos(a),s=Math.sin(a),t=1-c;
+  return [t*x*x+c,t*x*y-s*z,t*x*z+s*y, t*x*y+s*z,t*y*y+c,t*y*z-s*x, t*x*z-s*y,t*y*z+s*x,t*z*z+c];
+}
+var I3=[1,0,0,0,1,0,0,0,1];
+function Tf(R,t){return {R:R||I3,t:t||[0,0,0]};}
+function comp(A,B){return {R:mul3(A.R,B.R),t:add(mulv(A.R,B.t),A.t)};}   /* apply B first, then A */
+function ap(T,p){return add(mulv(T.R,p),T.t);}
+
+/* ---------- polygon primitives: each pushes {p:[points], c:[r,g,b]} ---------- */
+function box(o,T,c,h,col){
+  var faces=[
+    [[-1,-1,-1],[-1,1,-1],[-1,1,1],[-1,-1,1]],
+    [[1,-1,-1],[1,1,-1],[1,1,1],[1,-1,1]],
+    [[-1,-1,-1],[1,-1,-1],[1,-1,1],[-1,-1,1]],
+    [[-1,1,-1],[1,1,-1],[1,1,1],[-1,1,1]],
+    [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1]],
+    [[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]]
+  ];
+  faces.forEach(function(f){
+    o.push({p:f.map(function(s){return ap(T,[c[0]+s[0]*h[0],c[1]+s[1]*h[1],c[2]+s[2]*h[2]]);}),c:col});
+  });
+}
+/* cylinder from p0 to p1; pass rin for a hollow ring */
+function cyl(o,T,p0,p1,r,col,n,rin){
+  n=n||18;
+  var an=norm(sub(p1,p0));
+  var hv=Math.abs(an[0])<0.9?[1,0,0]:[0,1,0];
+  var u=norm(cross(an,hv)),v=cross(an,u);
+  function pt(p,rr,i){
+    var t=i/n*2*Math.PI,cs=Math.cos(t),sn=Math.sin(t);
+    return ap(T,[p[0]+rr*(cs*u[0]+sn*v[0]),p[1]+rr*(cs*u[1]+sn*v[1]),p[2]+rr*(cs*u[2]+sn*v[2])]);
+  }
+  var i,j,cap0=[],cap1=[];
+  for(i=0;i<n;i++){
+    j=i+1;
+    o.push({p:[pt(p0,r,i),pt(p0,r,j),pt(p1,r,j),pt(p1,r,i)],c:col});
+    if(rin){
+      o.push({p:[pt(p0,rin,i),pt(p0,rin,j),pt(p1,rin,j),pt(p1,rin,i)],c:col});
+      o.push({p:[pt(p0,rin,i),pt(p0,rin,j),pt(p0,r,j),pt(p0,r,i)],c:col});
+      o.push({p:[pt(p1,rin,i),pt(p1,rin,j),pt(p1,r,j),pt(p1,r,i)],c:col});
+    }else{
+      cap0.push(pt(p0,r,i));cap1.push(pt(p1,r,i));
+    }
+  }
+  if(!rin){o.push({p:cap0,c:col});o.push({p:cap1,c:col});}
+}
+function sphere(o,T,c,r,col,nl,nm){
+  nl=nl||10;nm=nm||16;
+  function P(la,lo){return ap(T,[c[0]+r*Math.cos(la)*Math.cos(lo),c[1]+r*Math.cos(la)*Math.sin(lo),c[2]+r*Math.sin(la)]);}
+  var i,j,la0,la1,lo0,lo1;
+  for(i=0;i<nl;i++){
+    la0=-Math.PI/2+Math.PI*i/nl;la1=-Math.PI/2+Math.PI*(i+1)/nl;
+    for(j=0;j<nm;j++){
+      lo0=2*Math.PI*j/nm;lo1=2*Math.PI*(j+1)/nm;
+      o.push({p:[P(la0,lo0),P(la0,lo1),P(la1,lo1),P(la1,lo0)],c:col});
+    }
+  }
+}
+
+/* ---------- colours: kit colour code ---------- */
+var GRAY=[128,140,156],DARK=[64,72,84],TICK=[30,36,44];
+var COL={R:[47,111,237],P:[214,69,61],H:[217,147,13],C:[46,158,91],U:[122,79,208],S:[214,71,154]};
+var HEX={R:'#2f6fed',P:'#d6453d',H:'#d9930d',C:'#2e9e5b',U:'#7a4fd0',S:'#d6479a'};
+
+/* ---------- joint scenes. Units: 1 = 20 mm hole pitch. Each build returns polygons and axis lines ---------- */
+var I=Tf();
+var BUILD={
+  R:function(v){
+    var o=[],ax=[],i,a,M=Tf(rot([0,0,1],v.theta)),c=COL.R;
+    box(o,I,[-1.9,0,-0.2],[1.9,0.45,0.2],GRAY);
+    cyl(o,I,[0,0,-0.4],[0,0,0],0.95,GRAY,28);                 /* protractor disc on the fixed link */
+    for(i=0;i<12;i++){                                         /* degree ticks every 30 degrees */
+      a=i*30*D2R;
+      box(o,Tf(rot([0,0,1],i*30)),[0.78,0,0.03],[0.14,0.025,0.03],TICK);
+    }
+    box(o,M,[1.9,0,0.2],[1.9,0.45,0.2],c);
+    cyl(o,M,[0,0,0.0],[0,0,0.4],0.45,c);
+    cyl(o,I,[0,0,-0.7],[0,0,0.65],0.15,DARK);                  /* M3 bolt axle */
+    cyl(o,I,[0,0,0.65],[0,0,0.85],0.3,DARK,6);
+    ax.push({a:[0,0,-1.6],b:[0,0,1.8],t:'axis'});
+    return {o:o,ax:ax};
+  },
+  P:function(v){
+    var o=[],ax=[],i,c=COL.P,d=v.d,M=Tf(I3,[d,0,0]);
+    box(o,I,[0,0,-0.15],[3.9,0.75,0.15],GRAY);
+    box(o,I,[0,0,0.1],[3.9,0.3,0.1],GRAY);                     /* dovetail ridge */
+    for(i=-3;i<=3;i++){box(o,I,[i,-0.55,0.005],[0.025,0.12,0.01],TICK);}   /* ruler ticks, one per hole pitch */
+    box(o,M,[0,0,0.38],[0.85,0.62,0.32],c);                    /* slider */
+    box(o,M,[0,1.7,0.38],[0.35,1.0,0.2],c);                    /* link carried by the slider */
+    ax.push({a:[-4.2,0,0.1],b:[4.2,0,0.1],t:'axis'});
+    return {o:o,ax:ax};
+  },
+  H:function(v){
+    var o=[],ax=[],i,c=COL.H,pitch=1,len=6,steps=60,s=v.phi/360*pitch;
+    var M=Tf(rot([1,0,0],v.phi),[s,0,0]);
+    box(o,I,[0,0,-1.3],[0.55,1.0,0.25],GRAY);                  /* base */
+    cyl(o,I,[-0.55,0,0],[0.55,0,0],0.95,GRAY,24,0.5);          /* fixed nut */
+    cyl(o,M,[-3,0,0],[3,0,0],0.42,c,16);                       /* screw core */
+    for(i=0;i<steps;i++){                                      /* thread ridge, one turn per pitch */
+      var x0=-3+len*i/steps,x1=-3+len*(i+1)/steps;
+      var t0=2*Math.PI*(x0+3)/pitch,t1=2*Math.PI*(x1+3)/pitch;
+      cyl(o,M,[x0,0.46*Math.cos(t0),0.46*Math.sin(t0)],[x1,0.46*Math.cos(t1),0.46*Math.sin(t1)],0.09,c,6);
+    }
+    box(o,M,[3.15,0,0],[0.15,0.15,0.9],c);                     /* turning handle */
+    ax.push({a:[-4,0,0],b:[4.6,0,0],t:'axis'});
+    return {o:o,ax:ax};
+  },
+  C:function(v){
+    var o=[],ax=[],c=COL.C,M=Tf(rot([1,0,0],v.theta),[v.d,0,0]);
+    box(o,I,[-4.1,0,0],[0.2,0.95,0.95],GRAY);
+    box(o,I,[4.1,0,0],[0.2,0.5,0.5],GRAY);
+    cyl(o,I,[-4,0,0],[4,0,0],0.22,GRAY,14);                    /* rod */
+    cyl(o,M,[-0.8,0,0],[0.8,0,0],0.6,c,20,0.23);               /* sleeve */
+    box(o,M,[0,0,1.35],[0.18,0.18,0.8],c);                     /* arm showing the rotation */
+    sphere(o,M,[0,0,2.2],0.3,c,6,10);
+    ax.push({a:[-4.4,0,0],b:[4.6,0,0],t:'axis'});
+    return {o:o,ax:ax};
+  },
+  U:function(v){
+    var o=[],ax=[],c=COL.U;
+    var Ma=Tf(rot([0,0,1],v.alpha));
+    var Mb=comp(Ma,Tf(rot([0,1,0],v.beta)));
+    /* link A with its fork; the first pin runs along z */
+    box(o,I,[-2.5,0,0],[1.6,0.35,0.3],GRAY);
+    box(o,I,[-0.95,0,0],[0.2,0.35,0.97],GRAY);
+    box(o,I,[-0.2,0,0.84],[0.55,0.35,0.13],GRAY);
+    box(o,I,[-0.2,0,-0.84],[0.55,0.35,0.13],GRAY);
+    cyl(o,I,[0,0,-1.1],[0,0,1.1],0.13,DARK,10);
+    /* cross: the second pin runs along y and turns with the first axis */
+    box(o,Ma,[0,0,0],[0.3,0.3,0.3],c);
+    cyl(o,Ma,[0,-1.1,0],[0,1.1,0],0.13,DARK,10);
+    /* link B with its fork, turning about the second pin */
+    box(o,Mb,[0.95,0,0],[0.2,0.97,0.35],c);
+    box(o,Mb,[0.2,0.84,0],[0.55,0.13,0.35],c);
+    box(o,Mb,[0.2,-0.84,0],[0.55,0.13,0.35],c);
+    box(o,Mb,[2.5,0,0],[1.6,0.3,0.35],c);
+    ax.push({a:[0,0,-1.5],b:[0,0,1.6],t:'axis 1'});
+    ax.push({a:ap(Ma,[0,-1.5,0]),b:ap(Ma,[0,1.6,0]),t:'axis 2'});
+    return {o:o,ax:ax};
+  },
+  S:function(v){
+    var o=[],ax=[],c=COL.S;
+    var M=comp(Tf(rot([0,0,1],v.yaw)),comp(Tf(rot([0,1,0],v.pitch)),Tf(rot([1,0,0],v.roll))));
+    box(o,I,[-2.5,0,0],[1.6,0.35,0.35],GRAY);
+    cyl(o,I,[-0.95,0,0],[-0.85,0,0],1.05,GRAY,20);             /* socket back */
+    cyl(o,I,[-0.9,0,0],[0.2,0,0],1.05,GRAY,20,0.82);           /* socket ring */
+    sphere(o,I,[0,0,0],0.72,c,10,16);
+    box(o,M,[2.1,0,0],[1.5,0.22,0.22],c);                      /* stem */
+    box(o,M,[3.0,0,0.42],[0.25,0.07,0.28],c);                  /* fin that shows the roll */
+    ax.push({a:[-1.7,0,0],b:[1.9,0,0],t:'x'});
+    ax.push({a:[0,-1.7,0],b:[0,1.7,0],t:'y'});
+    ax.push({a:[0,0,-1.7],b:[0,0,1.7],t:'z'});
+    return {o:o,ax:ax};
+  }
+};
+
+/* ---------- joint facts ---------- */
+var JOINTS=[
+ {id:'R',name:'Revolute',f:1,free:['','','','','','1'],
+  motion:'Rotation about one fixed axis. The two links stay at the same point.',
+  planar:'Yes, f = 1',example:'Door hinge, elbow, scissors pivot.',
+  printed:'M3 bolt as the axle, printed bushing, degree scale on the disc.',qty:8,
+  sliders:[{k:'theta',label:'Angle θ',min:-180,max:180,step:1,init:35,unit:'°'}]},
+ {id:'P',name:'Prismatic',f:1,free:['1','','','','',''],
+  motion:'Straight-line sliding along one axis. No rotation at all.',
+  planar:'Yes, f = 1',example:'Drawer, piston in a cylinder, slide on a rail.',
+  printed:'Dovetail rail and slider, 0.2 to 0.3 mm clearance, ruler ticks per hole pitch.',qty:3,
+  sliders:[{k:'d',label:'Slide d',min:-2.8,max:2.8,step:0.05,init:0.8,unit:'mm',scale:20}]},
+ {id:'H',name:'Helical',f:1,free:['c','','','c','',''],
+  motion:'Rotation and sliding along the same axis, tied together by the thread pitch. Turn once and the screw advances one pitch.',
+  planar:'No, spatial only',example:'Bolt in a nut, jar lid, lead screw.',
+  printed:'Coarse printed lead screw and nut.',qty:1,
+  sliders:[{k:'phi',label:'Turn φ',min:0,max:720,step:1,init:90,unit:'°'}]},
+ {id:'C',name:'Cylindrical',f:2,free:['1','','','1','',''],
+  motion:'Rotation and sliding along the same axis, and each one is free on its own.',
+  planar:'No, spatial only',example:'Ring on a pole that can slide and spin, a hinge pin that also slides.',
+  printed:'Rod through a printed sleeve with end stops.',qty:2,
+  sliders:[{k:'d',label:'Slide d',min:-2.6,max:2.6,step:0.05,init:-0.5,unit:'mm',scale:20},{k:'theta',label:'Angle θ',min:-180,max:180,step:1,init:40,unit:'°'}]},
+ {id:'U',name:'Universal',f:2,free:['','','','','1','1'],
+  motion:'Two rotations about two perpendicular axes that cross at one point. The second axis moves when the first one turns.',
+  planar:'No, spatial only',example:'Cardan joint in a drive shaft, joystick base.',
+  printed:'Printed cross with two perpendicular axles and two forks.',qty:2,
+  sliders:[{k:'alpha',label:'Axis 1 α',min:-180,max:180,step:1,init:30,unit:'°'},{k:'beta',label:'Axis 2 β',min:-60,max:60,step:1,init:25,unit:'°'}]},
+ {id:'S',name:'Spherical',f:3,free:['','','','1','1','1'],
+  motion:'Three independent rotations about one fixed point. The link can swing in any direction and also twist.',
+  planar:'No, spatial only',example:'Hip joint, ball-and-socket, camera ball head.',
+  printed:'Bought ball rod ends. A printed snap-fit ball wears quickly.',qty:2,
+  sliders:[{k:'roll',label:'Roll',min:-180,max:180,step:1,init:0,unit:'°'},{k:'pitch',label:'Pitch',min:-35,max:35,step:1,init:20,unit:'°'},{k:'yaw',label:'Yaw',min:-35,max:35,step:1,init:-25,unit:'°'}]}
+];
+var CELLS=[['Tx','slide x'],['Ty','slide y'],['Tz','slide z'],['Rx','turn x'],['Ry','turn y'],['Rz','turn z']];
+
+/* ---------- state ---------- */
+var cur=JOINTS[0];
+var vals={};
+var view={yaw:-38,tilt:24};
+var DEFAULT_VIEW={yaw:-38,tilt:24};
+
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+var slidersEl=document.getElementById('sliders'),factsEl=document.getElementById('facts');
+var axesBox=document.getElementById('axes');
+
+/* ---------- rendering ---------- */
+function themeInk(){return getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#18212b';}
+function themeSignal(){return getComputedStyle(document.documentElement).getPropertyValue('--signal').trim()||'#d9480f';}
+
+function themeVar(n,fallback){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||fallback;}
+
+/* label pill: link labels are outlined, joint labels are filled with the joint colour */
+function drawLabel(g,x,y,l,light){
+  g.save();
+  g.font='500 12px "IBM Plex Mono", monospace';g.textAlign='center';g.textBaseline='middle';
+  var tw=g.measureText(l.t).width+12,hh=20,rr=6;
+  var ink=light?'#14181f':themeVar('--ink','#18212b'),panel=light?'#ffffff':themeVar('--panel','#fbfbf9');
+  if(l.k==='joint'){x+=14;y-=14;}
+  var x0=x-tw/2,y0=y-hh/2;
+  g.beginPath();
+  g.moveTo(x0+rr,y0);g.arcTo(x0+tw,y0,x0+tw,y0+hh,rr);g.arcTo(x0+tw,y0+hh,x0,y0+hh,rr);
+  g.arcTo(x0,y0+hh,x0,y0,rr);g.arcTo(x0,y0,x0+tw,y0,rr);g.closePath();
+  if(l.k==='joint'){g.fillStyle=l.c;g.fill();g.fillStyle='#fff';}
+  else{g.fillStyle=panel;g.fill();g.strokeStyle=ink;g.lineWidth=1;g.stroke();g.fillStyle=ink;}
+  g.fillText(l.t,x,y+0.5);
+  g.restore();
+}
+
+/* draws any scene {o: polygons, ax: axis lines, lb: labels, c: centre, fit: half extents} on a canvas */
+function render(canvas,scene,view,showAxes){
+  var ctx=canvas.getContext('2d');
+  var dpr=canvas._dpr||window.devicePixelRatio||1;
+  var w=canvas._w||canvas.clientWidth,h=canvas._h||canvas.clientHeight;      /* print figures carry their own size */
+  if(!w||!h){return;}
+  if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+
+  var cyaw=Math.cos(view.yaw*D2R),syaw=Math.sin(view.yaw*D2R);
+  var ct=Math.cos(view.tilt*D2R),st=Math.sin(view.tilt*D2R);
+  var fit=scene.fit||[5.25,3.1],ce=scene.c||[0,0,0];
+  var sc=Math.min(w/(2*fit[0]),h/(2*fit[1])),cx=w/2,cy=h/2;
+  function pr(p0){
+    var p=[p0[0]-ce[0],p0[1]-ce[1],p0[2]-ce[2]];
+    var x1=p[0]*cyaw-p[1]*syaw,y1=p[0]*syaw+p[1]*cyaw,z1=p[2];
+    var y2=y1*ct-z1*st,z2=y1*st+z1*ct;
+    return {x:cx+x1*sc,y:cy-z2*sc,v:[x1,y2,z2]};
+  }
+  var L=norm([-0.35,-0.75,0.55]);
+  var items=scene.o.map(function(poly){
+    var q=poly.p.map(pr),k,nx=0,ny=0,nz=0,d=0,a,b;
+    for(k=0;k<q.length;k++){                                   /* Newell normal */
+      a=q[k].v;b=q[(k+1)%q.length].v;
+      nx+=(a[1]-b[1])*(a[2]+b[2]);ny+=(a[2]-b[2])*(a[0]+b[0]);nz+=(a[0]-b[0])*(a[1]+b[1]);
+      d+=a[1];
+    }
+    var n=norm([nx,ny,nz]);
+    var shade=0.48+0.52*Math.abs(dot(n,L));
+    return {q:q,d:d/q.length,col:poly.c.map(function(ch){return Math.min(255,Math.round(ch*shade*1.08));})};
+  });
+  items.sort(function(a,b){return b.d-a.d;});                  /* far to near */
+  ctx.lineJoin='round';
+  items.forEach(function(it){
+    ctx.beginPath();
+    ctx.moveTo(it.q[0].x,it.q[0].y);
+    for(var k=1;k<it.q.length;k++){ctx.lineTo(it.q[k].x,it.q[k].y);}
+    ctx.closePath();
+    ctx.fillStyle='rgb('+it.col[0]+','+it.col[1]+','+it.col[2]+')';
+    ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.22)';ctx.lineWidth=0.6;ctx.stroke();
+  });
+
+  if(showAxes){
+    var sig=canvas._light?'#d9480f':themeSignal();
+    ctx.save();
+    ctx.strokeStyle=sig;ctx.fillStyle=sig;ctx.lineWidth=2;ctx.setLineDash([7,5]);
+    ctx.font='13px "IBM Plex Mono", monospace';
+    scene.ax.forEach(function(l){
+      var a=pr(l.a),b=pr(l.b);
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+      ctx.setLineDash([]);ctx.fillText(l.t,b.x+6,b.y-4);ctx.setLineDash([7,5]);
+    });
+    ctx.restore();
+  }
+  (scene.lb||[]).forEach(function(l){var q=pr(l.p);drawLabel(ctx,q.x,q.y,l,canvas._light);});
+}
+function draw(){render(cv,BUILD[cur.id](vals),view,axesBox.checked);}
+
+/* ---------- sliders ---------- */
+function fmt(s,val){
+  if(s.unit==='mm'){return (val*s.scale).toFixed(0)+' mm';}
+  return s.step<1?val.toFixed(2)+s.unit:val.toFixed(0)+s.unit;
+}
+function buildSliders(){
+  slidersEl.innerHTML='';
+  cur.sliders.forEach(function(s,i){
+    var row=document.createElement('div');row.className='srow';
+    var id='sl-'+cur.id+'-'+s.k;
+    var lab=document.createElement('label');lab.htmlFor=id;lab.textContent=s.label;
+    var inp=document.createElement('input');inp.type='range';inp.id=id;inp.min=s.min;inp.max=s.max;inp.step=s.step;inp.value=vals[s.k];
+    var out=document.createElement('output');out.htmlFor=id;out.textContent=fmt(s,vals[s.k]);
+    inp.addEventListener('input',function(){
+      vals[s.k]=parseFloat(inp.value);out.textContent=fmt(s,vals[s.k]);
+      updateFactsLive();draw();
+    });
+    row.appendChild(lab);row.appendChild(inp);row.appendChild(out);slidersEl.appendChild(row);
+  });
+}
+
+/* ---------- facts panel ---------- */
+function cellsHtml(){
+  return CELLS.map(function(c,i){
+    var st=cur.free[i],cls=st==='1'?'free':(st==='c'?'coupled':'');
+    return '<div class="cell '+cls+'">'+c[0]+'<small>'+c[1]+'</small></div>';
+  }).join('');
+}
+function buildFacts(){
+  var c=6-cur.f;
+  var planar=(cur.id==='R'||cur.id==='P')?'3 − '+cur.f+' = '+(3-cur.f):'not used in the plane';
+  factsEl.style.setProperty('--jc',HEX[cur.id]);
+  factsEl.innerHTML=
+    '<div class="facthead"><div class="badge">'+cur.id+'</div><h3>'+cur.name+' joint</h3></div>'+
+    '<p class="motion">'+cur.motion+'</p>'+
+    '<div><div class="dofgrid" aria-label="Relative motions the joint allows">'+cellsHtml()+'</div>'+
+    '<p class="legend" style="margin-top:8px">Coloured cells are the relative motions between the two links that the joint allows. '+(cur.id==='H'?'The dashed pair moves together, so it counts once.':'')+'</p></div>'+
+    '<dl>'+
+      '<dt>DoF f</dt><dd class="eq">'+cur.f+'</dd>'+
+      '<dt>Constraints</dt><dd class="eq">6 − '+cur.f+' = '+c+' in space</dd>'+
+      '<dt>In the plane</dt><dd class="eq">'+planar+'</dd>'+
+      '<dt>Everyday</dt><dd>'+cur.example+'</dd>'+
+      '<dt>Printed as</dt><dd>'+cur.printed+'</dd>'+
+      '<dt id="live-label"></dt><dd class="eq" id="live"></dd>'+
+    '</dl>';
+  updateFactsLive();
+}
+function updateFactsLive(){
+  var l=document.getElementById('live'),ll=document.getElementById('live-label');
+  if(!l){return;}
+  if(cur.id==='H'){
+    ll.textContent='Advance';
+    l.textContent=(vals.phi/360).toFixed(2)+' pitch for '+(vals.phi/360).toFixed(2)+' turns';
+  }else{ll.textContent='';l.textContent='';}
+}
+
+/* ---------- joint selection ---------- */
+var chipsEl=document.getElementById('chips');
+function buildChips(){
+  JOINTS.forEach(function(j){
+    var b=document.createElement('button');b.type='button';b.className='chip';b.style.setProperty('--jc',HEX[j.id]);
+    b.setAttribute('aria-pressed',j===cur?'true':'false');b.dataset.id=j.id;
+    b.innerHTML='<i></i>'+j.name+' ('+j.id+')';
+    b.addEventListener('click',function(){select(j);});
+    chipsEl.appendChild(b);
+  });
+}
+function select(j){
+  cur=j;
+  vals={};
+  j.sliders.forEach(function(s){vals[s.k]=s.init;});
+  Array.prototype.forEach.call(chipsEl.children,function(b){b.setAttribute('aria-pressed',b.dataset.id===j.id?'true':'false');});
+  buildSliders();buildFacts();draw();
+}
+
+/* ---------- drag to rotate ---------- */
+var drag=null;
+cv.addEventListener('pointerdown',function(e){
+  drag={x:e.clientX,y:e.clientY,yaw:view.yaw,tilt:view.tilt,touch:e.pointerType==='touch'};
+  try{cv.setPointerCapture(e.pointerId);}catch(err){}
+});
+cv.addEventListener('pointermove',function(e){
+  if(!drag){return;}
+  view.yaw=drag.yaw+(e.clientX-drag.x)*0.5;
+  if(!drag.touch){view.tilt=Math.max(-85,Math.min(85,drag.tilt+(e.clientY-drag.y)*0.4));}
+  draw();
+});
+function endDrag(){drag=null;}
+cv.addEventListener('pointerup',endDrag);
+cv.addEventListener('pointercancel',endDrag);
+document.getElementById('reset').addEventListener('click',function(){view.yaw=DEFAULT_VIEW.yaw;view.tilt=DEFAULT_VIEW.tilt;draw();});
+axesBox.addEventListener('change',draw);
+window.addEventListener('resize',draw);
+if(window.ResizeObserver){new ResizeObserver(draw).observe(cv);}
+
+/* ---------- kit table ---------- */
+(function(){
+  var tb=document.getElementById('kittable');
+  tb.innerHTML=JOINTS.map(function(j){
+    return '<tr style="--jc:'+HEX[j.id]+'"><td><span class="dot"></span>'+j.name+' ('+j.id+')</td>'+
+      '<td class="num">'+j.f+'</td><td class="num">'+(6-j.f)+'</td>'+
+      '<td>'+(j.id==='R'||j.id==='P'?'Yes':'No')+'</td>'+
+      '<td class="num">'+j.qty+'</td><td>'+j.printed+'</td></tr>';
+  }).join('');
+})();
+
+/* ---------- mechanism diagrams for the calculator presets ---------- */
+var LINKC=[158,171,190],GROUNDC=[104,116,132],BASEC=[84,96,112],RINGC=[170,196,232];
+var BW=0.22,BT=0.1;                                             /* bar half width and half thickness */
+function plate(o,c,h){box(o,I,[c[0],c[1],-0.3],[h[0],h[1],0.08],BASEC);}
+/* flat bar between two points of the plane at height z */
+function bar2(o,a,b,z,col){
+  var dx=b[0]-a[0],dy=b[1]-a[1],len=Math.sqrt(dx*dx+dy*dy),ang=Math.atan2(dy,dx)/D2R;
+  box(o,Tf(rot([0,0,1],ang),[a[0],a[1],z]),[len/2,0,0],[len/2+BW*0.7,BW,BT],col);
+}
+function pin(o,p,z0,z1,type){cyl(o,I,[p[0],p[1],z0],[p[0],p[1],z1],0.2,COL[type],14);}
+/* upper intersection of circle (P, r1) and circle (Q, r2) */
+function circ(P,r1,Q,r2){
+  var dx=Q[0]-P[0],dy=Q[1]-P[1],d=Math.sqrt(dx*dx+dy*dy)||1e-9;
+  var l=(r1*r1-r2*r2+d*d)/(2*d),h2=r1*r1-l*l,h=h2>0?Math.sqrt(h2):0,ux=dx/d,uy=dy/d;
+  return [P[0]+l*ux-h*uy,P[1]+l*uy+h*ux];
+}
+function LK(t,p){return {k:'link',t:t,p:p};}
+function JN(t,type,p){return {k:'joint',t:t,c:HEX[type],p:p};}
+function mid(a,b,z){return [(a[0]+b[0])/2,(a[1]+b[1])/2,z];}
+
+/* 0: planar 2R arm */
+function m2R(v){
+  var o=[],L1=2.2,L2=1.6,a=v.t1*D2R,b=(v.t1+v.t2)*D2R,O=[0,0];
+  var A=[L1*Math.cos(a),L1*Math.sin(a)],P=[A[0]+L2*Math.cos(b),A[1]+L2*Math.sin(b)];
+  plate(o,[0,0],[4.4,4.2]);
+  cyl(o,I,[0,0,-0.2],[0,0,-0.19],L1+L2,RINGC,44,Math.abs(L1-L2));   /* workspace ring */
+  box(o,I,[0,0,0],[0.6,0.6,0.1],GROUNDC);
+  bar2(o,O,A,0.3,LINKC);bar2(o,A,P,0.6,LINKC);
+  pin(o,O,-0.1,0.8,'R');pin(o,A,0.12,0.9,'R');
+  sphere(o,I,[P[0],P[1],0.6],0.2,DARK,6,8);
+  return {o:o,ax:[],fit:[4.9,3.9],lb:[LK('L0',[-0.95,-0.95,0.2]),LK('L1',mid(O,A,0.8)),LK('L2',mid(A,P,1.1)),JN('J1','R',[0,0,0.85]),JN('J2','R',[A[0],A[1],0.95])]};
+}
+/* 1: planar four-bar */
+function m4bar(v){
+  var o=[],O2=[-1.5,0],O4=[1.5,0],th=v.th*D2R;
+  var B=[O2[0]+Math.cos(th),O2[1]+Math.sin(th)],C=circ(B,3.2,O4,2.4);
+  plate(o,[0.7,0.8],[4.4,2.9]);
+  bar2(o,O2,O4,0,GROUNDC);
+  bar2(o,O2,B,0.3,LINKC);bar2(o,B,C,0.6,LINKC);bar2(o,O4,C,0.3,LINKC);
+  pin(o,O2,-0.1,0.5,'R');pin(o,O4,-0.1,0.5,'R');pin(o,B,0.12,0.8,'R');pin(o,C,0.12,0.8,'R');
+  return {o:o,ax:[],c:[0.7,0.8,0],fit:[4.5,2.9],lb:[LK('L0',[0,-0.7,0.15]),LK('L1',mid(O2,B,0.6)),LK('L2',mid(B,C,0.9)),LK('L3',mid(O4,C,0.6)),
+    JN('J1','R',[O2[0],O2[1],0.5]),JN('J2','R',[B[0],B[1],0.8]),JN('J3','R',[C[0],C[1],0.8]),JN('J4','R',[O4[0],O4[1],0.5])]};
+}
+/* 2: planar five-bar */
+function m5bar(v){
+  var o=[],O1=[-1.2,0],O2=[1.2,0];
+  var B1=[O1[0]+1.5*Math.cos(v.t1*D2R),O1[1]+1.5*Math.sin(v.t1*D2R)],B2=[O2[0]+1.5*Math.cos(v.t2*D2R),O2[1]+1.5*Math.sin(v.t2*D2R)];
+  var P=circ(B1,2.4,B2,2.4);
+  plate(o,[0,1.4],[4.0,2.7]);
+  bar2(o,O1,O2,0,GROUNDC);
+  bar2(o,O1,B1,0.3,LINKC);bar2(o,O2,B2,0.3,LINKC);bar2(o,B1,P,0.6,LINKC);bar2(o,B2,P,0.9,LINKC);
+  pin(o,O1,-0.1,0.5,'R');pin(o,O2,-0.1,0.5,'R');pin(o,B1,0.12,0.8,'R');pin(o,B2,0.12,1.1,'R');pin(o,P,0.4,1.2,'R');
+  return {o:o,ax:[],c:[0,1.4,0],fit:[4.1,2.8],lb:[LK('L0',[0,-0.7,0.15]),LK('L1',mid(O1,B1,0.6)),LK('L2',mid(O2,B2,0.6)),LK('L3',mid(B1,P,0.95)),LK('L4',mid(B2,P,1.25)),
+    JN('J1','R',[O1[0],O1[1],0.5]),JN('J2','R',[O2[0],O2[1],0.5]),JN('J3','R',[B1[0],B1[1],0.8]),JN('J4','R',[B2[0],B2[1],1.1]),JN('J5','R',[P[0],P[1],1.2])]};
+}
+/* 3: slider-crank */
+function mSlider(v){
+  var o=[],O=[-2,0],th=v.th*D2R,a=1,b=3;
+  var A=[O[0]+a*Math.cos(th),O[1]+a*Math.sin(th)],X=O[0]+a*Math.cos(th)+Math.sqrt(b*b-a*a*Math.sin(th)*Math.sin(th)),S=[X,0];
+  plate(o,[0.8,0],[4.4,1.7]);
+  box(o,I,[1.3,0.5,0.15],[3.3,0.07,0.15],GROUNDC);box(o,I,[1.3,-0.5,0.15],[3.3,0.07,0.15],GROUNDC);   /* rails */
+  box(o,I,[O[0],O[1],0],[0.5,0.5,0.1],GROUNDC);
+  bar2(o,O,A,0.3,LINKC);bar2(o,A,S,0.7,LINKC);
+  box(o,I,[X,0,0.3],[0.55,0.34,0.22],COL.P);                                                            /* slider block */
+  pin(o,O,-0.1,0.5,'R');pin(o,A,0.12,0.9,'R');pin(o,S,0.3,0.95,'R');
+  return {o:o,ax:[],c:[0.8,0,0],fit:[4.4,2.2],lb:[LK('L0',[3.6,-0.95,0.3]),LK('L1',mid(O,A,0.6)),LK('L2',mid(A,S,1.0)),LK('L3',[X,0.0,0.75]),
+    JN('J1','R',[O[0],O[1],0.5]),JN('J2','R',[A[0],A[1],0.9]),JN('J3','R',[S[0],S[1],0.95]),JN('J4','P',[X+0.5,-0.4,0.3])]};
+}
+/* 4: parallelogram with a redundant coupler */
+function mPara(v){
+  var o=[],O1=[-1.5,0],O2=[1.5,0],f=v.ph*D2R,c=Math.cos(f),s=Math.sin(f);
+  var A1=[O1[0]+2.4*c,2.4*s],A2=[O2[0]+2.4*c,2.4*s],M1=[O1[0]+1.2*c,1.2*s],M2=[O2[0]+1.2*c,1.2*s];
+  plate(o,[0,1.2],[4.2,2.6]);
+  bar2(o,O1,O2,0,GROUNDC);
+  bar2(o,O1,A1,0.3,LINKC);bar2(o,O2,A2,0.3,LINKC);bar2(o,A1,A2,0.6,LINKC);bar2(o,M1,M2,0.6,LINKC);
+  pin(o,O1,-0.1,0.5,'R');pin(o,O2,-0.1,0.5,'R');pin(o,A1,0.12,0.8,'R');pin(o,A2,0.12,0.8,'R');pin(o,M1,0.12,0.8,'R');pin(o,M2,0.12,0.8,'R');
+  return {o:o,ax:[],c:[0,1.2,0],fit:[4.3,2.8],lb:[LK('L0',[0,-0.7,0.15]),LK('L1',mid(O1,M1,0.6)),LK('L2',mid(O2,M2,0.6)),LK('L3',mid(A1,A2,0.9)),LK('L4',mid(M1,M2,0.9)),
+    JN('J1','R',[O1[0],O1[1],0.5]),JN('J2','R',[O2[0],O2[1],0.5]),JN('J3','R',[A1[0],A1[1],0.8]),JN('J4','R',[A2[0],A2[1],0.8]),JN('J5','R',[M1[0],M1[1],0.8]),JN('J6','R',[M2[0],M2[1],0.8])]};
+}
+/* 5: spatial R-U-S chain */
+function mRUS(v){
+  var o=[];
+  var T1=Tf(rot([0,0,1],v.q1));
+  var Tu=comp(T1,Tf(I3,[2.2,0,0.3]));
+  var Tu1=comp(Tu,Tf(rot([0,0,1],v.al)));                       /* after universal axis 1 */
+  var Tu2=comp(Tu1,Tf(rot([0,1,0],v.be)));                      /* after universal axis 2: frame of link 2 */
+  var Ts=comp(Tu2,Tf(I3,[2,0,0]));
+  var Ts3=comp(Ts,comp(Tf(rot([0,0,1],v.ya)),comp(Tf(rot([0,1,0],v.pi)),Tf(rot([1,0,0],v.ro)))));
+  box(o,I,[0,0,-0.35],[1.3,1.3,0.1],BASEC);
+  box(o,I,[0,0,-0.15],[0.5,0.5,0.1],GROUNDC);
+  cyl(o,I,[0,0,-0.1],[0,0,0.55],0.22,COL.R,16);                 /* revolute axle */
+  box(o,T1,[1.1,0,0.3],[1.2,0.18,0.12],LINKC);                  /* link 1 */
+  box(o,Tu1,[0,0,0],[0.25,0.25,0.25],COL.U);                    /* universal cross */
+  cyl(o,Tu,[0,0,-0.6],[0,0,0.6],0.12,DARK,10);
+  cyl(o,Tu1,[0,-0.6,0],[0,0.6,0],0.12,DARK,10);
+  box(o,Tu2,[1,0,0],[1,0.15,0.15],LINKC);                       /* link 2 */
+  sphere(o,Ts,[0,0,0],0.38,COL.S,8,12);                         /* spherical ball */
+  box(o,Ts3,[0.9,0,0],[0.9,0.12,0.12],LINKC);                   /* link 3 */
+  box(o,Ts3,[1.5,0,0.3],[0.2,0.06,0.22],COL.S);                 /* fin that shows the roll */
+  return {o:o,ax:[],c:[1.5,0,0.4],fit:[4.9,3.7],lb:[LK('L0',[-1,-1,0.1]),LK('L1',ap(T1,[1.1,0,0.75])),LK('L2',ap(Tu2,[1,0,0.55])),LK('L3',ap(Ts3,[0.9,0,0.55])),
+    JN('J1','R',[0,0,0.6]),JN('J2','U',ap(Tu,[0,0,0.5])),JN('J3','S',ap(Ts,[0,0,0.5]))]};
+}
+/* 6: Stewart platform, six U-P-S legs */
+function mStewart(v){
+  var o=[],Rb=3,Rp=1.8,bA=[350,10,110,130,230,250],pA=[310,50,70,170,190,290];
+  var Tp=Tf(mul3(rot([0,0,1],v.ya),rot([1,0,0],v.ti)),[0,0,v.h]);
+  cyl(o,I,[0,0,-0.3],[0,0,-0.1],3.6,BASEC,28);
+  cyl(o,Tp,[0,0,-0.08],[0,0,0.08],2.2,LINKC,28);
+  var first=null;
+  for(var i=0;i<6;i++){
+    var ba=bA[i]*D2R,pa=pA[i]*D2R;
+    var B=[Rb*Math.cos(ba),Rb*Math.sin(ba),0],Pw=ap(Tp,[Rp*Math.cos(pa),Rp*Math.sin(pa),0]);
+    var M=[(B[0]+Pw[0])/2,(B[1]+Pw[1])/2,(B[2]+Pw[2])/2];
+    cyl(o,I,B,M,0.17,COL.P,12);                                  /* leg cylinder */
+    cyl(o,I,M,Pw,0.09,LINKC,10);                                 /* leg rod */
+    sphere(o,I,B,0.24,COL.U,6,10);
+    sphere(o,I,Pw,0.21,COL.S,6,10);
+    if(i===0){first={B:B,M:M,P:Pw};}
+  }
+  return {o:o,ax:[],c:[0,0,1.7],fit:[4.6,3.5],lb:[LK('L0 base',[-3.2,-1.6,0.1]),LK('L1 platform',ap(Tp,[0,0,0.5])),
+    JN('U ×6','U',first.B),JN('P ×6','P',first.M),JN('S ×6','S',first.P)]};
+}
+/* 7: Bennett 4R linkage, exact closure from the Denavit-Hartenberg chain */
+function benFrames(th1){
+  var al=60,be=30,a=2,b=a*Math.sin(be*D2R)/Math.sin(al*D2R);
+  var K=Math.sin((be+al)/2*D2R)/Math.sin((be-al)/2*D2R);
+  var t1=th1*D2R,t2=2*Math.atan2(K*Math.cos(t1/2),Math.sin(t1/2));
+  var ths=[th1,t2/D2R,360-th1,360-t2/D2R],ls=[a,b,a,b],tw=[al,be,al,be];
+  var F=[Tf()],i;
+  for(i=0;i<4;i++){
+    F.push(comp(F[i],comp(comp(Tf(rot([0,0,1],ths[i])),Tf(I3,[ls[i],0,0])),Tf(rot([1,0,0],tw[i])))));
+  }
+  return F;
+}
+function mBennett(v){
+  var o=[],F=benFrames(v.th),i,col;
+  for(i=0;i<4;i++){
+    var p=F[i].t,q=F[(i+1)%4].t;                                /* link i+1 runs from origin i to origin i+1; the last one is the ground link */
+    cyl(o,I,p,q,0.14,i===3?GROUNDC:LINKC,10);
+    cyl(o,I,ap(F[i],[0,0,-1.3]),ap(F[i],[0,0,1.3]),0.09,COL.R,10);   /* joint axis */
+    sphere(o,I,p,0.24,COL.R,6,10);
+  }
+  return {o:o,ax:[],c:[-0.58,0,0],fit:[4.5,4.1],lb:[LK('L0',mid(F[3].t,F[0].t,F[0].t[2])),LK('L1',mid(F[0].t,F[1].t,F[0].t[2]+0.3)),LK('L2',mid(F[1].t,F[2].t,F[1].t[2]+0.3)),LK('L3',mid(F[2].t,F[3].t,F[2].t[2]+0.3)),
+    JN('J1','R',F[0].t),JN('J2','R',F[1].t),JN('J3','R',F[2].t),JN('J4','R',F[3].t)]};
+}
+
+/* 8: robot dog with the body as the ground link: four legs, each a universal hip and a revolute knee */
+function dogLeg(s,a,f,k){
+  var Th=comp(Tf(rot([1,0,0],s*a)),Tf(rot([0,1,0],f)));             /* hip: sideways swing, then forward swing */
+  var Tk=comp(Th,comp(Tf(I3,[0,0,-1.3]),Tf(rot([0,1,0],k))));        /* knee */
+  return {Th:Th,Tk:Tk,foot:ap(Tk,[0,0,-1.3])};
+}
+function mDog(v,fl){
+  var o=[],hips=[[1.1,0.75],[1.1,-0.75],[-1.1,0.75],[-1.1,-0.75]],ph=v.ph*D2R,legs=[],i,minz=0;
+  for(i=0;i<4;i++){
+    var diag=(i===0||i===3)?0:Math.PI;                                /* trot: diagonal legs move together */
+    var sw=Math.sin(ph+diag),lift=Math.max(0,Math.cos(ph+diag));
+    legs.push(dogLeg(hips[i][1]>0?1:-1,v.sp,-v.kn/2+22*sw,v.kn+30*lift));
+  }
+  legs.forEach(function(L){minz=Math.min(minz,L.foot[2]);});
+  var z0=-minz;                                                       /* the lowest foot touches the floor */
+  /* body pose B: fixed on the ground link, or free (3 slides + 1 ball joint = 6 DoF) */
+  var B=fl?comp(Tf(I3,[v.bx,v.by,z0+0.2+v.bz]),comp(Tf(rot([0,0,1],v.yw)),comp(Tf(rot([0,1,0],v.pt)),Tf(rot([1,0,0],v.rl))))):Tf(I3,[0,0,z0]);
+  plate(o,[0,0],[3.8,2.5]);
+  box(o,B,[0,0,0],[1.55,0.62,0.3],fl?LINKC:GROUNDC);                  /* body: ground link, or a moving link when floating */
+  var lb=[],T0,Th,Tk;
+  legs.forEach(function(L,i){
+    T0=comp(B,Tf(I3,[hips[i][0],hips[i][1],0]));Th=comp(T0,L.Th);Tk=comp(T0,L.Tk);
+    box(o,Th,[0,0,-0.65],[0.13,0.13,0.65],LINKC);                     /* thigh */
+    box(o,Tk,[0,0,-0.65],[0.1,0.1,0.65],LINKC);                       /* shank */
+    box(o,Th,[0,0,0],[0.22,0.22,0.22],COL.U);                         /* hip: universal cross */
+    cyl(o,Tk,[0,-0.3,0],[0,0.3,0],0.16,COL.R,12);                     /* knee pin */
+    sphere(o,Tk,[0,0,-1.3],0.16,DARK,6,8);                            /* foot */
+    if(i===0){lb=[LK(fl?'body (free)':'L0 body',ap(B,[0,0,0.75])),LK('L1 thigh',ap(Th,[0,0.15,-0.7])),LK('L2 shank',ap(Tk,[0,0.15,-0.7])),
+                  JN('U ×4','U',ap(Th,[0,0,0.3])),JN('R ×4','R',ap(Tk,[0,0,0.3]))];}
+  });
+  if(fl){lb.push(JN('3P + S','S',ap(B,[0,0,0])));}
+  return {o:o,ax:[],c:[0,0,1.5],fit:fl?[4.4,3.2]:[4.2,3.0],lb:lb};
+}
+/* 9: humanoid with the trunk as the ground link: legs S-R-U, arms S-R-S */
+function mHuman(v,fl){
+  var o=[],s=v.sq*D2R,hipZ=0.35+3*Math.cos(s),lb=[];
+  /* trunk pose: fixed to the ground link, or free (3 slides + 1 ball joint = 6 DoF) */
+  var T0=fl?comp(Tf(I3,[v.bx,v.by,hipZ+0.1+v.bz]),comp(Tf(rot([0,0,1],v.yw)),comp(Tf(rot([0,1,0],v.pt)),Tf(rot([1,0,0],v.rl))))):Tf(I3,[0,0,hipZ]);
+  plate(o,[0,0],[3.0,2.4]);
+  box(o,T0,[0,0,0.05],[0.5,1.0,0.3],fl?LINKC:GROUNDC);                         /* pelvis */
+  box(o,T0,[0,0,1.6],[0.55,1.0,1.3],fl?LINKC:GROUNDC);                         /* torso */
+  sphere(o,T0,[0,0,3.45],0.55,fl?LINKC:GROUNDC,8,12);                          /* head, rigid with the trunk */
+  [1,-1].forEach(function(sg){
+    var Th=comp(T0,comp(Tf(I3,[0,sg*0.6,0]),Tf(rot([0,1,0],-v.sq))));
+    var Tk=comp(Th,comp(Tf(I3,[0,0,-1.5]),Tf(rot([0,1,0],2*v.sq))));
+    var Ta=comp(Tk,comp(Tf(I3,[0,0,-1.5]),Tf(rot([0,1,0],-v.sq))));    /* foot stays flat on the floor */
+    box(o,Th,[0,0,-0.75],[0.2,0.2,0.75],LINKC);                       /* thigh */
+    box(o,Tk,[0,0,-0.75],[0.17,0.17,0.75],LINKC);                     /* shank */
+    box(o,Ta,[0.35,0,-0.25],[0.6,0.3,0.1],LINKC);                     /* foot */
+    sphere(o,Th,[0,0,0],0.3,COL.S,6,10);                              /* hip: spherical */
+    cyl(o,Tk,[0,-0.35,0],[0,0.35,0],0.17,COL.R,12);                   /* knee: revolute */
+    box(o,Ta,[0,0,0],[0.2,0.2,0.2],COL.U);                            /* ankle: universal */
+    var Ts=comp(T0,comp(Tf(I3,[0,sg*1.3,2.55]),comp(Tf(rot([1,0,0],sg*v.sp)),Tf(rot([0,1,0],-v.ar)))));
+    var Te=comp(Ts,comp(Tf(I3,[0,0,-1.2]),Tf(rot([0,1,0],-v.el))));
+    var Tw=comp(Te,Tf(I3,[0,0,-1.1]));
+    box(o,Ts,[0,0,-0.6],[0.16,0.16,0.6],LINKC);                       /* upper arm */
+    box(o,Te,[0,0,-0.55],[0.14,0.14,0.55],LINKC);                     /* forearm */
+    box(o,Tw,[0,0,-0.3],[0.1,0.2,0.3],LINKC);                         /* hand */
+    sphere(o,Ts,[0,0,0],0.3,COL.S,6,10);                              /* shoulder: spherical */
+    cyl(o,Te,[0,-0.3,0],[0,0.3,0],0.15,COL.R,12);                     /* elbow: revolute */
+    sphere(o,Tw,[0,0,0],0.2,COL.S,6,8);                               /* wrist: spherical */
+    if(sg===1){lb=[LK(fl?'trunk (free)':'L0 trunk',ap(T0,[0.6,0,1.8])),LK('L1–L12 limb links',ap(Th,[0.2,0.3,-0.75])),
+                    JN('S ×6','S',ap(Th,[0,0,0.2])),JN('R ×4','R',ap(Tk,[0,0,0.25])),JN('U ×2','U',ap(Ta,[0,0,0.2]))];}
+  });
+  if(fl){lb.push(JN('3P + S','S',ap(T0,[0,0,0.9])));}
+  return {o:o,ax:[],c:fl?[0.5,0,2.4]:[0.5,0,1.85],fit:fl?[6.0,4.6]:[3.8,2.6],lb:lb};
+}
+
+var deg='°';
+var MECH=[
+ {build:m2R,view:[-8,60],
+  sliders:[{k:'t1',label:'Joint 1 θ1',min:-180,max:180,step:1,init:50,unit:deg},{k:'t2',label:'Joint 2 θ2',min:-150,max:150,step:1,init:-70,unit:deg}],
+  desc:'Two links in a chain with two revolute joints. The faint ring is the workspace: outer radius L1 + L2, inner radius |L1 − L2|.',
+  links:[['Ground (base)'],['Link 1'],['Link 2']],joints:[['R','L0–L1'],['R','L1–L2']],
+  real:'Both sliders move freely, so the arm has 2 DoF, as the formula says.'},
+ {build:m4bar,view:[-8,60],
+  sliders:[{k:'th',label:'Crank θ',min:0,max:360,step:1,init:60,unit:deg}],
+  desc:'A crank, a coupler and a rocker between two fixed pivots. One input angle fixes the whole motion.',
+  links:[['Ground'],['Crank'],['Coupler'],['Rocker']],joints:[['R','L0–L1'],['R','L1–L2'],['R','L2–L3'],['R','L3–L0']],
+  real:'One slider drives everything, so the mechanism has 1 DoF, as the formula says.'},
+ {build:m5bar,view:[-8,60],
+  sliders:[{k:'t1',label:'Crank 1 θ1',min:40,max:140,step:1,init:75,unit:deg},{k:'t2',label:'Crank 2 θ2',min:40,max:140,step:1,init:105,unit:deg}],
+  desc:'Two grounded cranks drive two couplers that meet at one point. Two input angles fix the pose.',
+  links:[['Ground'],['Crank 1'],['Crank 2'],['Coupler 1'],['Coupler 2']],joints:[['R','L0–L1'],['R','L0–L2'],['R','L1–L3'],['R','L2–L4'],['R','L3–L4']],
+  real:'Both sliders move freely, so the mechanism has 2 DoF, as the formula says.'},
+ {build:mSlider,view:[-8,58],
+  sliders:[{k:'th',label:'Crank θ',min:0,max:360,step:1,init:50,unit:deg}],
+  desc:'A crank turns a rod that pushes a slider along a rail. The slider is the prismatic joint.',
+  links:[['Ground (base and rails)'],['Crank'],['Rod'],['Slider']],joints:[['R','L0–L1'],['R','L1–L2'],['R','L2–L3'],['P','L3–L0']],
+  real:'One slider drives everything, so the mechanism has 1 DoF, as the formula says.'},
+ {build:mPara,view:[-8,60],
+  sliders:[{k:'ph',label:'Crank angle',min:30,max:150,step:1,init:70,unit:deg}],
+  desc:'Two equal cranks and two equal, parallel couplers. The second coupler repeats the constraint of the first.',
+  links:[['Ground'],['Crank 1'],['Crank 2'],['Coupler A (at the tips)'],['Coupler B (at mid-crank)']],joints:[['R','L0–L1'],['R','L0–L2'],['R','L1–L3'],['R','L2–L3'],['R','L1–L4'],['R','L2–L4']],
+  real:'It moves with 1 DoF, one slider drives it, but the formula gives 0. The formula counts the redundant constraint twice.'},
+ {build:mRUS,view:[-38,24],
+  sliders:[{k:'q1',label:'R angle',min:-180,max:180,step:1,init:30,unit:deg},{k:'al',label:'U axis 1',min:-180,max:180,step:1,init:20,unit:deg},{k:'be',label:'U axis 2',min:-75,max:75,step:1,init:30,unit:deg},
+           {k:'ya',label:'S yaw',min:-60,max:60,step:1,init:20,unit:deg},{k:'pi',label:'S pitch',min:-60,max:60,step:1,init:-25,unit:deg},{k:'ro',label:'S roll',min:-180,max:180,step:1,init:0,unit:deg}],
+  desc:'A spatial chain: one revolute, one universal, one spherical joint. Space needs m = 6.',
+  links:[['Ground (base)'],['Link 1'],['Link 2'],['Link 3']],joints:[['R','L0–L1'],['U','L1–L2'],['S','L2–L3']],
+  real:'Six sliders move independently (1 + 2 + 3), so the chain has 6 DoF, as the formula says.'},
+ {build:mStewart,view:[-30,22],
+  sliders:[{k:'h',label:'Height',min:2.8,max:4.4,step:0.05,init:3.5,unit:'',fmt:function(x){return (x*20).toFixed(0)+' mm';}},{k:'ti',label:'Tilt',min:-12,max:12,step:1,init:6,unit:deg},{k:'ya',label:'Yaw',min:-25,max:25,step:1,init:12,unit:deg}],
+  desc:'A base and a platform joined by six legs. Each leg has a universal joint at the base, a prismatic joint in the middle and a spherical joint at the platform. Calculation only, not built from this kit.',
+  links:[['Base'],['Platform'],['Leg parts: 6 cylinders and 6 rods',12]],joints:[['U','base–leg',6],['P','leg cylinder–rod',6],['S','leg–platform',6]],
+  real:'The platform has 6 DoF. The sliders set height, tilt and yaw, and the six leg lengths follow.'},
+ {build:mBennett,view:[-38,24],
+  sliders:[{k:'th',label:'Joint 1 θ1',min:0,max:360,step:1,init:70,unit:deg}],
+  desc:'Four revolute joints with skew axes. Opposite links are equal, with link twists of 60° and 30°. Calculation only, not built from this kit.',
+  links:[['Ground'],['Link 1'],['Link 2'],['Link 3']],joints:[['R','L0–L1'],['R','L1–L2'],['R','L2–L3'],['R','L3–L0']],
+  real:'One slider drives it, so it moves with 1 DoF, but the formula gives −2. The lengths a and b and the twists α and β satisfy a sin β = b sin α, which makes the constraints redundant.'},
+ {build:mDog,view:[-35,18],
+  sliders:[{k:'ph',label:'Trot phase',min:0,max:360,step:1,init:40,unit:deg},{k:'kn',label:'Knee bend',min:40,max:110,step:1,init:70,unit:deg},{k:'sp',label:'Hip splay',min:0,max:30,step:1,init:8,unit:deg}],
+  desc:'Four legs on a fixed body. Each hip has two motor axes that cross, which is a universal joint, and each knee is a revolute joint. The sliders move the 12 joints in groups.',
+  links:[['Body (ground), held fixed'],['Thighs and shanks: 4 legs × 2 links',8]],joints:[['U','hips',4],['R','knees',4]],
+  real:'With the body held fixed the legs have 12 DoF, 3 per leg. A free-floating body adds 6, so the whole robot moves with 18.'},
+ {build:mHuman,view:[-35,15],
+  sliders:[{k:'sq',label:'Squat',min:0,max:75,step:1,init:25,unit:deg},{k:'ar',label:'Arm raise',min:-30,max:170,step:1,init:30,unit:deg},{k:'el',label:'Elbow bend',min:0,max:120,step:1,init:40,unit:deg},{k:'sp',label:'Arm spread',min:0,max:80,step:1,init:15,unit:deg}],
+  desc:'A simplified humanoid. Each leg has a spherical hip, a revolute knee and a universal ankle (6 DoF). Each arm has a spherical shoulder, a revolute elbow and a spherical wrist (7 DoF). Head, hands and waist are rigid.',
+  links:[['Trunk (ground): pelvis, torso and head, held fixed'],['Thighs, shanks and feet: 2 legs × 3 links',6],['Upper arms, forearms and hands: 2 arms × 3 links',6]],joints:[['S','hips, shoulders, wrists',6],['R','knees, elbows',4],['U','ankles',2]],
+  real:'With the trunk held fixed the limbs have 26 DoF (2 × 6 in the legs, 2 × 7 in the arms). A free-floating trunk adds 6, so the whole robot moves with 32. The sliders drive only some joints, and the others stay at neutral.'},
+ {build:function(v){return mDog(v,true);},view:[-35,18],
+  sliders:[{k:'ph',label:'Trot phase',min:0,max:360,step:1,init:40,unit:deg},{k:'kn',label:'Knee bend',min:40,max:110,step:1,init:70,unit:deg},{k:'sp',label:'Hip splay',min:0,max:30,step:1,init:8,unit:deg},{k:'by',label:'Body y',min:-0.8,max:0.8,step:0.05,init:0,unit:''},{k:'bx',label:'Body x',min:-1.2,max:1.2,step:0.05,init:0.4,unit:''},{k:'bz',label:'Body height',min:-0.6,max:1.0,step:0.05,init:0.3,unit:''},{k:'yw',label:'Yaw',min:-60,max:60,step:1,init:20,unit:deg},{k:'pt',label:'Pitch',min:-30,max:30,step:1,init:10,unit:deg},{k:'rl',label:'Roll',min:-30,max:30,step:1,init:8,unit:deg}],
+  desc:'The same dog, but the body is no longer fixed to the ground. A free body can slide along x, y and z and turn about any axis, which equals three prismatic joints and one spherical joint with three massless links between them.',
+  links:[['Ground (the floor)'],['Massless links of the free base',3],['Body'],['Thighs and shanks: 4 legs × 2 links',8]],joints:[['P','body slides x, y, z',3],['S','body orientation'],['U','hips',4],['R','knees',4]],
+  real:'The free base adds 6 DoF to the 12 in the legs, so the whole robot moves with 18. The sliders drive only some of them.'},
+ {build:function(v){return mHuman(v,true);},view:[-35,15],
+  sliders:[{k:'sq',label:'Squat',min:0,max:75,step:1,init:25,unit:deg},{k:'ar',label:'Arm raise',min:-30,max:170,step:1,init:30,unit:deg},{k:'el',label:'Elbow bend',min:0,max:120,step:1,init:40,unit:deg},{k:'sp',label:'Arm spread',min:0,max:80,step:1,init:15,unit:deg},{k:'by',label:'Body y',min:-0.8,max:0.8,step:0.05,init:0,unit:''},{k:'bx',label:'Body x',min:-1.2,max:1.2,step:0.05,init:0.4,unit:''},{k:'bz',label:'Body height',min:-0.6,max:1.0,step:0.05,init:0.3,unit:''},{k:'yw',label:'Yaw',min:-60,max:60,step:1,init:20,unit:deg},{k:'pt',label:'Pitch',min:-30,max:30,step:1,init:10,unit:deg},{k:'rl',label:'Roll',min:-30,max:30,step:1,init:8,unit:deg}],
+  desc:'The same humanoid with a free trunk. The trunk can slide along x, y and z and turn about any axis, which equals three prismatic joints and one spherical joint with three massless links between them.',
+  links:[['Ground (the floor)'],['Massless links of the free base',3],['Trunk: pelvis, torso and head'],['Thighs, shanks and feet: 2 legs × 3 links',6],['Upper arms, forearms and hands: 2 arms × 3 links',6]],joints:[['P','trunk slides x, y, z',3],['S','trunk orientation'],['S','hips, shoulders, wrists',6],['R','knees, elbows',4],['U','ankles',2]],
+  real:'The free trunk adds 6 DoF to the 26 in the limbs, so the whole robot moves with 32. The sliders drive only some of them.'}
+];
+
+var mIdx=1,mvals={},mview={yaw:-8,tilt:60};
+var cv2=document.getElementById('cv2'),mslidersEl=document.getElementById('msliders'),mechInfoEl=document.getElementById('mechinfo');
+function drawM(){if(MECH[mIdx]){render(cv2,MECH[mIdx].build(mvals),mview,false);}}
+function mfmt(s,val){return s.fmt?s.fmt(val):val.toFixed(0)+s.unit;}
+function buildMSliders(){
+  mslidersEl.innerHTML='';
+  MECH[mIdx].sliders.forEach(function(s){
+    var row=document.createElement('div');row.className='srow';
+    var id='ms-'+mIdx+'-'+s.k;
+    var lab=document.createElement('label');lab.htmlFor=id;lab.textContent=s.label;
+    var inp=document.createElement('input');inp.type='range';inp.id=id;inp.min=s.min;inp.max=s.max;inp.step=s.step;inp.value=mvals[s.k];
+    var out=document.createElement('output');out.htmlFor=id;out.textContent=mfmt(s,mvals[s.k]);
+    inp.addEventListener('input',function(){mvals[s.k]=parseFloat(inp.value);out.textContent=mfmt(s,mvals[s.k]);drawM();});
+    row.appendChild(lab);row.appendChild(inp);row.appendChild(out);mslidersEl.appendChild(row);
+  });
+}
+function mechInfoHtml(i){
+  var M=MECH[i],P=PRESETS[i],h='',n=0,j=1,lis='',jl='';
+  M.links.forEach(function(e){var c=e[1]||1,lab=c===1?'L'+n:'L'+n+'–L'+(n+c-1);lis+='<li><span class="tag">'+lab+'</span><span>'+e[0]+'</span></li>';n+=c;});
+  M.joints.forEach(function(e){var c=e[2]||1,lab=c===1?'J'+j:'J'+j+'–J'+(j+c-1);jl+='<li><i class="jdot" style="--jc:'+HEX[e[0]]+'"></i><span class="tag">'+lab+'</span><span>'+e[0]+' · '+e[1]+'</span></li>';j+=c;});
+  h='<h3>'+P.name+'</h3><p style="margin:0">'+M.desc+'</p>'+
+    '<div><div class="tag">Links N = '+n+', ground counted</div><ul>'+lis+'</ul></div>'+
+    '<div><div class="tag">Joints J = '+(j-1)+'</div><ul>'+jl+'</ul></div>'+
+    '<p style="margin:0">'+M.real+'</p>';
+  return h;
+}
+function buildMechInfo(){mechInfoEl.innerHTML=mechInfoHtml(mIdx);}
+function setMech(i){
+  if(!MECH[i]){return;}
+  mIdx=i;mvals={};
+  MECH[i].sliders.forEach(function(s){mvals[s.k]=s.init;});
+  mview={yaw:MECH[i].view[0],tilt:MECH[i].view[1]};
+  buildMSliders();buildMechInfo();drawM();
+}
+function updateMechNote(){
+  var el=document.getElementById('mnote');
+  if(el){el.textContent=(typeof st!=='undefined'&&st.preset<0)?'Diagram shows the last preset. Your counts are custom.':'Drag the picture to rotate the view';}
+}
+/* drag to rotate the mechanism view */
+var mdrag=null;
+cv2.addEventListener('pointerdown',function(e){mdrag={x:e.clientX,y:e.clientY,yaw:mview.yaw,tilt:mview.tilt,touch:e.pointerType==='touch'};try{cv2.setPointerCapture(e.pointerId);}catch(err){}});
+cv2.addEventListener('pointermove',function(e){
+  if(!mdrag){return;}
+  mview.yaw=mdrag.yaw+(e.clientX-mdrag.x)*0.5;
+  if(!mdrag.touch){mview.tilt=Math.max(-85,Math.min(85,mdrag.tilt+(e.clientY-mdrag.y)*0.4));}
+  drawM();
+});
+cv2.addEventListener('pointerup',function(){mdrag=null;});
+cv2.addEventListener('pointercancel',function(){mdrag=null;});
+document.getElementById('mreset').addEventListener('click',function(){mview={yaw:MECH[mIdx].view[0],tilt:MECH[mIdx].view[1]};drawM();});
+window.addEventListener('resize',drawM);
+if(window.ResizeObserver){new ResizeObserver(drawM).observe(cv2);}
+
+/* ---------- Grübler calculator ---------- */
+var FJ={R:1,P:1,H:1,C:2,U:2,S:3};
+var KEYS=['R','P','H','C','U','S'];
+var PRESETS=[
+ {name:'2R planar arm',m:3,N:3,c:{R:2}},
+ {name:'Four-bar',m:3,N:4,c:{R:4}},
+ {name:'Five-bar',m:3,N:5,c:{R:5}},
+ {name:'Slider-crank',m:3,N:4,c:{R:3,P:1}},
+ {name:'Parallelogram with redundant coupler',m:3,N:5,c:{R:6},note:'The formula gives 0, but with equal cranks and parallel couplers the real mechanism moves with 1 DoF.'},
+ {name:'R–U–S chain',m:6,N:4,c:{R:1,U:1,S:1}},
+ {name:'Stewart platform (calculation only)',m:6,N:14,c:{U:6,P:6,S:6}},
+ {name:'Bennett 4R (calculation only)',m:6,N:4,c:{R:4},note:'The formula gives −2, but with special link twists the real mechanism moves with 1 DoF.'},
+ {name:'Robot dog (body fixed)',m:6,N:9,c:{U:4,R:4}},
+ {name:'Humanoid (trunk fixed)',m:6,N:13,c:{S:6,R:4,U:2}},
+ {name:'Robot dog (free body)',m:6,N:13,c:{P:3,S:1,U:4,R:4},note:'A free body counts as three prismatic joints and one spherical joint with three massless links. The whole dog moves with 18 DoF.'},
+ {name:'Humanoid (free trunk)',m:6,N:17,c:{P:3,S:7,R:4,U:2},note:'A free trunk counts as three prismatic joints and one spherical joint with three massless links. The whole humanoid moves with 32 DoF.'}
+];
+var presetsEl=document.getElementById('presets'),inputsEl=document.getElementById('inputs'),resultEl=document.getElementById('result');
+var st={m:3,N:4,c:{R:4,P:0,H:0,C:0,U:0,S:0},note:'',preset:1};
+
+function field(label,id,html){return '<div class="field"><label for="'+id+'">'+label+'</label>'+html+'</div>';}
+function buildInputs(){
+  var h=field('Space','in-m','<select id="in-m"><option value="3">Plane (m = 3)</option><option value="6">Space (m = 6)</option></select>');
+  h+=field('Links N (with ground)','in-N','<input id="in-N" type="number" min="1" max="30" step="1">');
+  KEYS.forEach(function(k){h+=field(k+' joints (f = '+FJ[k]+')','in-'+k,'<input id="in-'+k+'" type="number" min="0" max="30" step="1">');});
+  inputsEl.innerHTML=h;
+  document.getElementById('in-m').addEventListener('change',function(e){st.m=parseInt(e.target.value,10);st.preset=-1;st.note='';sync();});
+  document.getElementById('in-N').addEventListener('input',function(e){st.N=Math.max(1,parseInt(e.target.value,10)||1);st.preset=-1;st.note='';sync(true);});
+  KEYS.forEach(function(k){
+    document.getElementById('in-'+k).addEventListener('input',function(e){st.c[k]=Math.max(0,parseInt(e.target.value,10)||0);st.preset=-1;st.note='';sync(true);});
+  });
+}
+function buildPresets(){
+  presetsEl.innerHTML='';
+  PRESETS.forEach(function(p,i){
+    var b=document.createElement('button');b.type='button';b.className='preset';b.textContent=p.name;
+    b.setAttribute('aria-pressed',st.preset===i?'true':'false');
+    b.addEventListener('click',function(){
+      st.m=p.m;st.N=p.N;st.c={R:0,P:0,H:0,C:0,U:0,S:0};
+      Object.keys(p.c).forEach(function(k){st.c[k]=p.c[k];});
+      st.note=p.note||'';st.preset=i;setMech(i);sync();
+    });
+    presetsEl.appendChild(b);
+  });
+}
+function sync(keepFocus){
+  /* in the plane only revolute and prismatic joints exist */
+  if(st.m===3){['H','C','U','S'].forEach(function(k){st.c[k]=0;});}
+  document.getElementById('in-m').value=String(st.m);
+  if(!keepFocus){document.getElementById('in-N').value=st.N;}
+  KEYS.forEach(function(k){
+    var el=document.getElementById('in-'+k);
+    el.disabled=(st.m===3&&'HCUS'.indexOf(k)>=0);
+    if(!keepFocus||el.disabled){el.value=st.c[k];}
+  });
+  Array.prototype.forEach.call(presetsEl.children,function(b,i){b.setAttribute('aria-pressed',st.preset===i?'true':'false');});
+  var J=0,S=0;
+  KEYS.forEach(function(k){J+=st.c[k];S+=st.c[k]*FJ[k];});
+  var dof=st.m*(st.N-1-J)+S;
+  var terms=[];
+  KEYS.forEach(function(k){if(st.c[k]>0){terms.push(st.c[k]+'×'+FJ[k]);}});
+  var html='<div class="big">DoF = '+st.m+'('+st.N+' − 1 − '+J+') + '+S+' = '+dof+'</div>'+
+    '<div class="formula">J = '+J+' joints · Σf = '+(terms.length?terms.join(' + ')+' = ':'')+S+'</div>';
+  if(st.note){html+='<div class="warn">'+st.note+'</div>';}
+  else if(dof<=0){html+='<div class="warn">The formula predicts no motion. Check the link geometry: some mechanisms with special proportions still move.</div>';}
+  resultEl.innerHTML=html;
+  updateMechNote();
+}
+
+buildInputs();buildPresets();sync();
+/* ---------- lab activities: tables with input cells, answers shown on request ---------- */
+var LAB=[
+ {title:'Free body',
+  intro:'<p>Use the free block. Predict how many DoF it has in each situation, then move it and count.</p>',
+  table:{h:['Situation','Predicted DoF','Observed DoF'],r:[
+    ['Block sliding flat on the table',null,null],
+    ['Block held in your hand in the air',null,null],
+    ['Block with one corner pinned to the table by a revolute joint',null,null]]},
+  ans:'<p>Flat on the table: 3. In the air: 6. Pinned by one revolute joint: 1.</p>'},
+ {title:'The joint zoo',
+  intro:'<p>Clamp one link of each joint to the table and move the other. Write what motions you can make, then give f and the number of constraints in space.</p>',
+  table:{h:['Joint','Motions I can make','f','Constraints (6 − f)'],r:[
+    ['Revolute',null,null,null],['Prismatic',null,null,null],['Helical',null,null,null],
+    ['Cylindrical',null,null,null],['Universal',null,null,null],['Spherical',null,null,null]]},
+  extra:'<p>Question: when you turn the helical joint, can you also slide it freely? Explain in one sentence why its f is 1.</p><input class="cellin wide" type="text" aria-label="Answer about the helical joint">',
+  ans:'<p>R: turn about the axis, f = 1, 5 constraints. P: slide along the axis, f = 1, 5. H: turn and slide together, f = 1, 5. C: turn and slide independently, f = 2, 4. U: two perpendicular rotations, f = 2, 4. S: three rotations about a point, f = 3, 3.</p><p>For the helical joint, the slide is set by the turn through the pitch, so sliding it freely is not possible.</p>'},
+ {title:'Predict, build, check',
+  intro:'<p>For each mechanism, count N and J, apply Grübler\'s formula, then build it on the base plate and move it. Count the independent motions you observe. The calculator above has a diagram of each one.</p>',
+  table:{h:['Mechanism','Joints used','N','J','Predicted DoF','Observed DoF','Match?'],r:[
+    ['Planar 2R arm','2 R',null,null,null,null,null],
+    ['Planar four-bar','4 R',null,null,null,null,null],
+    ['Planar five-bar','5 R',null,null,null,null,null],
+    ['Slider-crank','3 R + 1 P',null,null,null,null,null],
+    ['R–U–S chain','1 R + 1 U + 1 S',null,null,null,null,null]]},
+  ans:'<div class="tablewrap"><table><thead><tr><th>Mechanism</th><th>N</th><th>J</th><th>Predicted DoF</th></tr></thead><tbody><tr><td>Planar 2R arm</td><td>3</td><td>2</td><td>2</td></tr><tr><td>Planar four-bar</td><td>4</td><td>4</td><td>1</td></tr><tr><td>Planar five-bar</td><td>5</td><td>5</td><td>2</td></tr><tr><td>Slider-crank</td><td>4</td><td>4</td><td>1</td></tr><tr><td>R–U–S chain (space)</td><td>4</td><td>3</td><td>6</td></tr></tbody></table></div>'},
+ {title:'Where the formula fails',
+  intro:'<p>Build this planar mechanism. Two cranks of equal length are pinned to the base plate. Join them with two coupler links of equal length, one coupler at the top holes and one at the bottom holes, so the cranks and couplers form two parallelograms.</p><ul><li>Count N and J, and apply the formula. Write the prediction.</li><li>Move the mechanism. How many DoF does it have?</li><li>Remove one coupler. Does the motion of the other links change?</li></ul>',
+  extra:'<input class="cellin wide" type="text" aria-label="Prediction and observation for the parallelogram">',
+  ans:'<p>N = 5 and J = 6, so the formula gives 3(5 − 1 − 6) + 6 = 0. The real mechanism moves with 1 DoF because the second coupler repeats the constraint of the first. Removing one coupler leaves the motion unchanged.</p>'},
+ {title:'Break the geometry',
+  intro:'<p>Replace one coupler with a link that is one hole longer or shorter. Try to move the mechanism. Write what happens, and explain why the formula still gives the same number as before.</p>',
+  extra:'<input class="cellin wide" type="text" aria-label="What happens when one coupler is a hole longer">',
+  ans:'<p>With one coupler a hole too long or too short the mechanism jams, apart from play in the printed joints. The count of 0 now agrees with the formula. The parallelogram was the special case where the lengths make one constraint redundant.</p>'},
+ {title:'A real robot arm',
+  intro:'<p>Look at the SO-101 arm. Count its joints and their types. Apply Grübler\'s formula to the arm without the gripper, then say how many DoF the gripper adds.</p>',
+  extra:'<input class="cellin wide" type="text" aria-label="Joint count and DoF of the arm">',
+  ans:'<p>Check the count on your own arm. The SO-101 has five revolute joints in the arm plus the gripper. Without the gripper, N = 6 and J = 5, so DoF = 6(6 − 1 − 5) + 5 = 5. The gripper adds one more motion.</p>'},
+ {title:'Configuration space of your arm',
+  intro:'<p>Use the printed degree scales on your 2R arm. Draw its C-space as a square with axes θ1 and θ2, both from 0° to 360°. Move the arm to five configurations and mark them. Then block one joint with a stop at 90° and shade the region that is no longer reachable.</p>',
+  ans:'<p>The C-space is a torus, drawn as a square with wrap-around edges. A stop at 90° on one joint removes a strip of that square.</p>'},
+ {title:'Workspace of your arm',
+  intro:'<p>Fix a pen to the tip of your 2R arm and a sheet of paper under it. Trace the outer edge, then the inner edge, by moving the arm as far as it goes. Fill in the table.</p>',
+  table:{h:['Quantity','Predicted (mm)','Measured (mm)'],r:[['Outer radius',null,null],['Inner radius',null,null]]},
+  extra:'<p>Question: your joints have limits. How does that change the workspace, and does it change the task space?</p><input class="cellin wide" type="text" aria-label="Effect of joint limits">',
+  ans:'<p>Outer radius L1 + L2, inner radius |L1 − L2|. Measured values come out smaller where joint limits or play cut the motion short. Joint limits shrink the workspace and leave the task space unchanged.</p>'}
+];
+function labTable(t){
+  var h='<div class="tablewrap"><table><thead><tr>'+t.h.map(function(x){return '<th>'+x+'</th>';}).join('')+'</tr></thead><tbody>';
+  t.r.forEach(function(row){
+    h+='<tr>'+row.map(function(c,ci){
+      return c===null?'<td><input class="cellin" type="text" aria-label="'+t.h[ci]+' for '+row[0]+'"></td>':'<td>'+c+'</td>';
+    }).join('')+'</tr>';
+  });
+  return h+'</tbody></table></div>';
+}
+(function(){
+  var h='';
+  LAB.forEach(function(a,i){
+    h+='<div class="card act"><h3>Activity '+(i+1)+': '+a.title+'</h3>'+a.intro+(a.table?labTable(a.table):'')+(a.extra||'')+
+       '<div class="answer"><strong>Instructor answer.</strong>'+a.ans+'</div></div>';
+  });
+  document.getElementById('labs').innerHTML=h;
+  document.getElementById('showAns').addEventListener('change',function(e){
+    document.getElementById('lab').classList.toggle('show',e.target.checked);
+  });
+})();
+
+
+/* ======================= step-by-step guide ======================= */
+var PRINT=/[?&]print/.test(location.search),ANS=/[?&]answers/.test(location.search);
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ---------- scenes for the first three steps: dots, flat bodies, blocks ---------- */
+var DOT=[232,110,40],TABLE=[180,192,210],FLOOR=[160,174,194];
+function pathAx(pts,labels){var ax=[],i;for(i=0;i<pts.length-1;i++){ax.push({a:pts[i],b:pts[i+1],t:labels[i]||''});}return ax;}   /* dashed path from the origin to the object */
+function Rxyz(roll,pitch,yaw){return mul3(rot([0,0,1],yaw),mul3(rot([0,1,0],pitch),rot([1,0,0],roll)));}
+function table2d(o){box(o,I,[0,0,-0.1],[3.8,2.5,0.1],TABLE);}
+function mark(o,p){cyl(o,I,[p[0],p[1],p[2]],[p[0],p[1],p[2]+0.12],0.08,TICK,8);}      /* origin mark */
+function plank(o,T,c){box(o,T,c,[0.95,0.55,0.15],COL.R);box(o,T,[c[0]+0.95,c[1],c[2]],[0.14,0.2,0.15],DOT);}   /* orange nose shows the heading */
+function block(o,T){
+  box(o,T,[0,0,0],[0.85,0.6,0.4],COL.R);
+  box(o,T,[0,0,0.41],[0.5,0.25,0.015],DOT);                      /* orange stripe on top */
+  box(o,T,[0.86,0,0],[0.02,0.2,0.2],DOT);                        /* orange patch on the +x end */
+}
+var SCENE={
+  bead:function(v){var o=[];
+    box(o,I,[0,0,-0.2],[4.3,1.4,0.1],TABLE);
+    box(o,I,[-3.8,0,0.25],[0.12,0.12,0.45],DARK);box(o,I,[3.8,0,0.25],[0.12,0.12,0.45],DARK);
+    cyl(o,I,[-3.8,0,0.7],[3.8,0,0.7],0.05,DARK,10);
+    cyl(o,I,[0,0,0.55],[0,0,0.85],0.03,TICK,8);
+    sphere(o,I,[v.s,0,0.7],0.3,DOT,8,12);
+    return {o:o,ax:pathAx([[0,0,0.7],[v.s,0,0.7]],['s']),c:[0,0,0.5],fit:[4.5,2.3],lb:[]};},
+  sheet:function(v){var o=[];
+    box(o,I,[0,0,-0.06],[3.8,2.6,0.06],TABLE);mark(o,[0,0,0]);
+    sphere(o,I,[v.x,v.y,0.26],0.26,DOT,8,12);
+    return {o:o,ax:pathAx([[0,0,0.12],[v.x,0,0.12],[v.x,v.y,0.12]],['x','y']),c:[0,0,0],fit:[4.3,2.7],lb:[]};},
+  space:function(v){var o=[];
+    box(o,I,[0,0,-0.06],[3.4,2.4,0.06],FLOOR);mark(o,[0,0,0]);
+    sphere(o,I,[v.x,v.y,v.z],0.26,DOT,8,12);
+    return {o:o,ax:pathAx([[0,0,0.05],[v.x,0,0.05],[v.x,v.y,0.05],[v.x,v.y,v.z]],['x','y','z']),c:[0,0,1.2],fit:[4.0,3.1],lb:[]};},
+  pfree:function(v){var o=[];table2d(o);
+    var T=Tf(rot([0,0,1],v.th),[v.x,v.y,0.2]);plank(o,T,[0,0,0]);
+    return {o:o,ax:pathAx([[0,0,0.05],[v.x,0,0.05],[v.x,v.y,0.05]],['x','y']).concat([{a:[v.x,v.y,0.4],b:[v.x+1.6*Math.cos(v.th*D2R),v.y+1.6*Math.sin(v.th*D2R),0.4],t:'θ'}]),c:[0,0,0],fit:[4.3,2.7],lb:[]};},
+  ppin:function(v){var o=[];table2d(o);
+    var T=Tf(rot([0,0,1],v.th),[0,0,0.2]);plank(o,T,[0.75,0,0]);
+    cyl(o,I,[0,0,0],[0,0,0.5],0.1,DARK,10);sphere(o,I,[0,0,0.5],0.14,TICK,6,8);
+    return {o:o,ax:[{a:[0,0,0.62],b:[2.2,0,0.62],t:''},{a:[0,0,0.62],b:[2.2*Math.cos(v.th*D2R),2.2*Math.sin(v.th*D2R),0.62],t:'θ'}],c:[0,0,0],fit:[4.3,2.7],lb:[]};},
+  pslot:function(v){var o=[];table2d(o);
+    box(o,I,[0,0,0.01],[3.4,0.17,0.012],DARK);
+    var T=Tf(rot([0,0,1],v.th),[v.s,0,0.2]);plank(o,T,[0.75,0,0]);
+    cyl(o,I,[v.s,0,0],[v.s,0,0.5],0.1,DARK,10);sphere(o,I,[v.s,0,0.5],0.14,TICK,6,8);
+    return {o:o,ax:[{a:[0,0,0.62],b:[v.s,0,0.62],t:'s'},{a:[v.s,0,0.62],b:[v.s+2.0*Math.cos(v.th*D2R),2.0*Math.sin(v.th*D2R),0.62],t:'θ'}],c:[0,0,0],fit:[4.3,2.7],lb:[]};},
+  bfree:function(v){var o=[];
+    box(o,I,[0,0,-0.06],[3.4,2.4,0.06],FLOOR);mark(o,[0,0,0]);
+    block(o,Tf(Rxyz(v.rl,v.pt,v.yw),[v.x,v.y,v.z]));
+    return {o:o,ax:pathAx([[0,0,0.05],[v.x,0,0.05],[v.x,v.y,0.05],[v.x,v.y,v.z]],['x','y','z']),c:[0,0,1.2],fit:[4.0,3.1],lb:[]};},
+  btable:function(v){var o=[];
+    box(o,I,[0,0,-0.06],[3.4,2.4,0.06],FLOOR);mark(o,[0,0,0]);
+    block(o,Tf(rot([0,0,1],v.yw),[v.x,v.y,0.4]));
+    return {o:o,ax:pathAx([[0,0,0.05],[v.x,0,0.05],[v.x,v.y,0.05]],['x','y']),c:[0,0,1.0],fit:[4.0,3.1],lb:[]};},
+  bpivot:function(v){var o=[],P=[0,0,2.3],R=Rxyz(v.rl,v.pt,v.yw),c=add(P,mulv(R,[0.85,0.6,0.4]));
+    box(o,I,[0,0,-0.06],[3.4,2.4,0.06],FLOOR);
+    cyl(o,I,[0,0,0],P,0.1,DARK,10);
+    block(o,Tf(R,c));
+    sphere(o,I,P,0.2,COL.S,6,10);
+    return {o:o,ax:[],c:[0,0,1.6],fit:[4.0,3.2],lb:[]};}
+};
+
+/* the three stages. Each item: name, DoF, the numbers that fix the configuration, and why */
+var FOUND={
+ dof:[
+  {id:'bead',name:'Bead on a wire',dof:1,vars:'s',why:'The wire holds the bead on one line. Only the position s along the line is left to choose.',view:[-30,22],
+   sl:[{k:'s',label:'Position s',min:-3.2,max:3.2,step:0.05,init:1.2,unit:''}],init:{s:1.2}},
+  {id:'sheet',name:'Dot on a sheet',dof:2,vars:'x, y',why:'The sheet holds the dot on a plane. Two numbers, x and y, say where it is.',view:[-30,38],
+   sl:[{k:'x',label:'x',min:-3.2,max:3.2,step:0.05,init:1.4,unit:''},{k:'y',label:'y',min:-2.1,max:2.1,step:0.05,init:0.9,unit:''}],init:{x:1.4,y:0.9}},
+  {id:'space',name:'Dot in space',dof:3,vars:'x, y, z',why:'Nothing holds the dot back. It needs three numbers: x, y and z.',view:[-35,28],
+   sl:[{k:'x',label:'x',min:-3,max:3,step:0.05,init:1.4,unit:''},{k:'y',label:'y',min:-2,max:2,step:0.05,init:0.9,unit:''},{k:'z',label:'z',min:0.3,max:3,step:0.05,init:1.4,unit:''}],init:{x:1.4,y:0.9,z:1.4}}
+ ],
+ d2:[
+  {id:'pfree',name:'Free on the table',dof:3,vars:'x, y, θ',why:'Two numbers place the body (x and y). A third, the angle θ, says which way it points.',view:[-25,48],
+   sl:[{k:'x',label:'x',min:-2.6,max:2.6,step:0.05,init:0.8,unit:''},{k:'y',label:'y',min:-1.5,max:1.5,step:0.05,init:0.4,unit:''},{k:'th',label:'Angle θ',min:-180,max:180,step:1,init:30,unit:'°'}],init:{x:0.8,y:0.4,th:30}},
+  {id:'pslot',name:'Pin in a slot',dof:2,vars:'s, θ',why:'The pin can only slide along the slot (s), and the body can still turn about the pin (θ). Position and angle each lose one freedom.',view:[-25,48],
+   sl:[{k:'s',label:'Pin position s',min:-2.4,max:2.4,step:0.05,init:0.6,unit:''},{k:'th',label:'Angle θ',min:-180,max:180,step:1,init:35,unit:'°'}],init:{s:0.6,th:35}},
+  {id:'ppin',name:'Pinned at one point',dof:1,vars:'θ',why:'The pin fixes the position of one point of the body, which removes x and y. Only the angle θ is left.',view:[-25,48],
+   sl:[{k:'th',label:'Angle θ',min:-180,max:180,step:1,init:40,unit:'°'}],init:{th:40}}
+ ],
+ d3:[
+  {id:'bfree',name:'Free block',dof:6,vars:'x, y, z, roll, pitch, yaw',why:'Three numbers place the block and three angles orient it.',view:[-35,24],
+   sl:[{k:'x',label:'x',min:-2.4,max:2.4,step:0.05,init:0.8,unit:''},{k:'y',label:'y',min:-1.6,max:1.6,step:0.05,init:0.4,unit:''},{k:'z',label:'z',min:1.0,max:3,step:0.05,init:1.8,unit:''},{k:'rl',label:'Roll',min:-180,max:180,step:1,init:25,unit:'°'},{k:'pt',label:'Pitch',min:-80,max:80,step:1,init:20,unit:'°'},{k:'yw',label:'Yaw',min:-180,max:180,step:1,init:30,unit:'°'}],init:{x:0.8,y:0.4,z:1.8,rl:25,pt:20,yw:30}},
+  {id:'btable',name:'Resting on a table',dof:3,vars:'x, y, yaw',why:'The table fixes the height and stops the block from tipping, so z, roll and pitch are gone. It can still slide in x and y and spin about the vertical axis.',view:[-35,24],
+   sl:[{k:'x',label:'x',min:-2.4,max:2.4,step:0.05,init:0.8,unit:''},{k:'y',label:'y',min:-1.6,max:1.6,step:0.05,init:0.4,unit:''},{k:'yw',label:'Yaw',min:-180,max:180,step:1,init:30,unit:'°'}],init:{x:0.8,y:0.4,yw:30}},
+  {id:'bpivot',name:'Corner held by a ball joint',dof:3,vars:'roll, pitch, yaw',why:'The ball joint fixes the position of one corner, which removes x, y and z. The block can still turn in any direction about that corner.',view:[-35,20],
+   sl:[{k:'rl',label:'Roll',min:-70,max:70,step:1,init:20,unit:'°'},{k:'pt',label:'Pitch',min:-70,max:70,step:1,init:-25,unit:'°'},{k:'yw',label:'Yaw',min:-180,max:180,step:1,init:30,unit:'°'}],init:{rl:20,pt:-25,yw:30}}
+ ]
+};
+
+/* generic stage: chips, canvas, sliders, facts. Draws SCENE[item.id] */
+function stageFacts(it,extra){
+  return '<div class="facthead"><div class="badge" style="--jc:var(--accent)">'+it.dof+'</div><h3>'+it.name+'</h3></div>'+
+    '<p class="motion">'+it.why+'</p>'+
+    '<dl><dt>DoF</dt><dd class="eq">'+it.dof+'</dd><dt>Numbers needed</dt><dd class="eq">'+it.vars+'</dd></dl>'+
+    '<p class="legend">The number of sliders equals the DoF. Dashed lines in the picture show how far the object is from the origin.</p>';
+}
+function makeStage(host,items){
+  var cur=items[0],vals={},view={yaw:cur.view[0],tilt:cur.view[1]},drag=null;
+  host.innerHTML='<div class="chips"></div><div class="viewer"><div class="card stage"><canvas role="img" aria-label="3D view. Drag to rotate."></canvas><div class="sliders"></div><div class="stage-bar"><span>Drag the picture to rotate the view</span><button class="btn" type="button">Reset view</button></div></div><div class="card facts"></div></div>';
+  var chips=host.querySelector('.chips'),canvas=host.querySelector('canvas'),sl=host.querySelector('.sliders'),facts=host.querySelector('.facts');
+  function draw(){render(canvas,SCENE[cur.id](vals),view,true);}
+  function select(it){
+    cur=it;vals={};Object.keys(it.init).forEach(function(k){vals[k]=it.init[k];});
+    view={yaw:it.view[0],tilt:it.view[1]};
+    Array.prototype.forEach.call(chips.children,function(b){b.setAttribute('aria-pressed',b.dataset.id===it.id?'true':'false');});
+    sl.innerHTML='';
+    it.sl.forEach(function(s){
+      var row=document.createElement('div');row.className='srow';
+      var id='st-'+it.id+'-'+s.k,lab=document.createElement('label');lab.htmlFor=id;lab.textContent=s.label;
+      var inp=document.createElement('input');inp.type='range';inp.id=id;inp.min=s.min;inp.max=s.max;inp.step=s.step;inp.value=vals[s.k];
+      var out=document.createElement('output');out.htmlFor=id;out.textContent=fmt(s,vals[s.k]);
+      inp.addEventListener('input',function(){vals[s.k]=parseFloat(inp.value);out.textContent=fmt(s,vals[s.k]);draw();});
+      row.appendChild(lab);row.appendChild(inp);row.appendChild(out);sl.appendChild(row);
+    });
+    facts.innerHTML=stageFacts(it);
+    draw();
+  }
+  items.forEach(function(it){
+    var b=document.createElement('button');b.type='button';b.className='chip';b.style.setProperty('--jc','var(--accent)');b.dataset.id=it.id;
+    b.innerHTML='<i></i>'+it.name+' ('+it.dof+')';b.addEventListener('click',function(){select(it);});chips.appendChild(b);
+  });
+  canvas.addEventListener('pointerdown',function(e){drag={x:e.clientX,y:e.clientY,yaw:view.yaw,tilt:view.tilt,touch:e.pointerType==='touch'};try{canvas.setPointerCapture(e.pointerId);}catch(err){}});
+  canvas.addEventListener('pointermove',function(e){if(!drag){return;}view.yaw=drag.yaw+(e.clientX-drag.x)*0.5;if(!drag.touch){view.tilt=Math.max(-85,Math.min(85,drag.tilt+(e.clientY-drag.y)*0.4));}draw();});
+  canvas.addEventListener('pointerup',function(){drag=null;});canvas.addEventListener('pointercancel',function(){drag=null;});
+  host.querySelector('.stage-bar .btn').addEventListener('click',function(){view={yaw:cur.view[0],tilt:cur.view[1]};draw();});
+  if(window.ResizeObserver){new ResizeObserver(draw).observe(canvas);}
+  select(items[0]);
+  return {items:items,draw:draw};
+}
+
+/* ---------- quiz engine: question cards with instant feedback ---------- */
+var QSTATE={};                                                   /* quiz id -> {n,done,score,missed:[]} */
+function shuf(n){var a=[],i,j,t;for(i=0;i<n;i++){a.push(i);}for(i=n-1;i>0;i--){j=Math.floor(Math.random()*(i+1));t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function questionCard(Q,label,onAnswer){
+  var card=document.createElement('div');card.className='card q';
+  var tag=document.createElement('div');tag.className='tag';tag.textContent=label;
+  var text=document.createElement('p');text.className='qtext';text.textContent=Q.q;
+  var list=document.createElement('div');list.className='qopts';
+  var why=document.createElement('div');why.className='qwhy';why.setAttribute('aria-live','polite');
+  var order=shuf(Q.o.length);
+  order.forEach(function(oi){
+    var b=document.createElement('button');b.type='button';b.className='qopt';b.textContent=Q.o[oi];
+    if(oi===Q.a){b.dataset.c='1';}                                 /* marks the right option for the instructor key */
+    b.addEventListener('click',function(){
+      if(card.dataset.done){return;}
+      card.dataset.done='1';
+      var right=(oi===Q.a),st=right?'right':'wrong';
+      Array.prototype.forEach.call(list.children,function(x){if(x.dataset.c){x.dataset.state='right';}x.disabled=true;});
+      b.dataset.state=st;
+      var lead=document.createElement('strong');lead.dataset.state=st;lead.textContent=right?'Right. ':'Not quite. ';
+      var p=document.createElement('p');p.style.margin='0';p.appendChild(lead);
+      if(Q.wh){p.insertAdjacentHTML('beforeend',Q.wh);}else{p.appendChild(document.createTextNode(Q.w));}
+      why.appendChild(p);
+      if(Q.extra){why.insertAdjacentHTML('beforeend',Q.extra());}
+      onAnswer(right);
+    });
+    list.appendChild(b);
+  });
+  card.appendChild(tag);card.appendChild(text);card.appendChild(list);card.appendChild(why);
+  card._Q=Q;
+  return card;
+}
+function stepTitle(id){var s=STEPS.filter(function(x){return x.id===id;})[0];return s?s.nav:id;}
+function stepNumber(id){var k=-1;STEPS.forEach(function(x,i){if(x.id===id){k=i;}});return k;}
+function makeQuiz(host,id,title,items,final){
+  var st=QSTATE[id]={n:items.length,done:0,score:0,missed:[]},cards;
+  host.classList.add('quizhost');
+  host.innerHTML='<div class="qhead"><h3>'+title+'</h3><span class="tag" data-role="count"></span></div><div data-role="cards"></div><div class="qresult" data-role="result" aria-live="polite"></div>';
+  var cardsEl=host.querySelector('[data-role=cards]'),countEl=host.querySelector('[data-role=count]'),resEl=host.querySelector('[data-role=result]');
+  function build(){
+    st.done=0;st.score=0;st.missed=[];cardsEl.innerHTML='';resEl.style.display='none';
+    items.forEach(function(Q,qi){
+      var c=questionCard(Q,'Question '+(qi+1)+(Q.t?' · '+Q.t:''),function(right){
+        st.done++;if(right){st.score++;}else{st.missed.push(Q);}
+        update();
+      });
+      c.style.marginBottom='10px';cardsEl.appendChild(c);
+    });
+    update();
+  }
+  function update(){
+    countEl.textContent='Answered '+st.done+' of '+st.n+' · Score '+st.score;
+    if(st.done===st.n){
+      var h='<div><strong>You got '+st.score+' of '+st.n+'.</strong> '+(st.missed.length?'Look again at: ':'Everything was right.')+'</div>';
+      if(st.missed.length){
+        var seen={},row='';
+        st.missed.forEach(function(Q){var s=Q.s||id;if(!seen[s]){seen[s]=1;row+='<button class="btn" type="button" data-go="'+s+'">'+esc(stepTitle(s))+'</button>';}});
+        h+='<div class="row">'+row+'</div>';
+      }
+      h+='<div class="row"><button class="btn" type="button" data-role="again">Try again</button></div>';
+      resEl.innerHTML=h;resEl.style.display='flex';
+      resEl.querySelector('[data-role=again]').addEventListener('click',build);
+      Array.prototype.forEach.call(resEl.querySelectorAll('[data-go]'),function(b){b.addEventListener('click',function(){go(stepNumber(b.dataset.go));});});
+    }else{resEl.style.display='none';}
+    refreshNav();
+  }
+  host._cards=function(){return cardsEl.querySelectorAll('.q');};
+  build();
+}
+
+/* ---------- step content ---------- */
+var JTXT={
+ R:{lead:'Start with the simplest joint. A revolute joint is a hinge: two links turn about one fixed axis and nothing else.',
+    key:'One number, the angle θ, fixes where the second link is relative to the first, so f = 1. The other five relative motions (three slides and two turns) are blocked, so the joint imposes 5 constraints in space.'},
+ P:{lead:'A prismatic joint lets one link slide along a straight line relative to the other, with no rotation at all.',
+    key:'One number, the slide distance d, so f = 1 and there are 5 constraints in space. In the plane, revolute and prismatic joints are the only two types, and each removes 2 of the 3 planar DoF.'},
+ H:{lead:'A helical joint is a screw in a nut. The links turn and slide along the same axis, but the thread ties the two motions together.',
+    key:'Turn the screw by φ and it advances φ/360 of the pitch. Only one number is free, so f = 1 even though two motions are visible. The dashed cells mark this coupling.'},
+ C:{lead:'A cylindrical joint also turns and slides along one axis, but here the two motions are independent, like a ring on a pole.',
+    key:'Two numbers, d and θ, are free, so f = 2 and there are 4 constraints. Compare with the helical joint: the same kind of motion, but one free number against two.'},
+ U:{lead:'A universal joint holds two rotation axes at right angles, crossing at one point. It is the joint in a drive shaft.',
+    key:'Two angles, α and β, are free, so f = 2 and there are 4 constraints. The second axis moves when the first one turns.'},
+ S:{lead:'A spherical joint is a ball and socket: three independent rotations about one fixed point. The link can swing in any direction and also twist.',
+    key:'Three angles (roll, pitch, yaw) are free, so f = 3 and there are 3 constraints in space. The two links share one point and can orient freely about it.'}
+};
+var JQ={
+ R:[{q:'What is f for a revolute joint?',o:['0','1','2','3'],a:1,w:'One angle is free, so f = 1.'},
+    {q:'How many constraints does a revolute joint impose on the relative motion of two links in space?',o:['1','3','5','6'],a:2,w:'Constraints in space are 6 − f = 6 − 1 = 5.'},
+    {q:'Which everyday object contains a revolute joint?',o:['A door hinge','A drawer on runners','A camera ball head','A screw in a nut'],a:0,w:'A hinge turns about one axis. The drawer is prismatic, the ball head spherical and the screw helical.'}],
+ P:[{q:'Which motion does a prismatic joint allow?',o:['Turning about one axis','Straight-line sliding with no rotation','Turning and sliding together','Three rotations about a point'],a:1,w:'A prismatic joint slides along one line. The orientation of the two links relative to each other never changes.'},
+    {q:'In the plane, a prismatic joint allows f = 1. How many of the 3 planar DoF between the two links does it remove?',o:['0','1','2','3'],a:2,w:'In the plane it removes m − f = 3 − 1 = 2.'},
+    {q:'Why does a drawer have f = 1?',o:['One number, how far it is pulled out, says where it is','It can also turn','The drawer is fixed to the ground','It has three sliding directions'],a:0,w:'Only the distance along the runners is free, so one number fixes the drawer relative to the cabinet.'}],
+ H:[{q:'Why does a helical joint have f = 1 and not 2?',o:['Turning and sliding are tied together by the thread pitch','It can only turn and never slide','It can only slide and never turn','The nut is fixed to the ground'],a:0,w:'Once you choose how far to turn the screw, the thread decides how far it slides, so only one number is free.'},
+    {q:'A screw has a pitch of 6 mm. How far does it advance in 2 full turns?',o:['3 mm','6 mm','12 mm','24 mm'],a:2,w:'One turn advances one pitch, so 2 turns advance 2 × 6 = 12 mm.'},
+    {q:'Which object contains a helical joint?',o:['A jar lid','A door hinge','A drawer','A joystick base'],a:0,w:'A lid turns on a thread and moves along its axis as it turns.'}],
+ C:[{q:'What is f for a cylindrical joint?',o:['1','2','3','4'],a:1,w:'The turn and the slide are both free and independent, so f = 2.'},
+    {q:'What is the difference between a cylindrical joint and a helical joint?',o:['In a cylindrical joint the turn and the slide are independent','The cylindrical joint cannot slide','The helical joint has f = 3','There is no difference'],a:0,w:'Both allow turn and slide along one axis. The cylindrical joint lets you choose each freely (f = 2). The thread of the helical joint ties them together (f = 1).'},
+    {q:'How many constraints does a cylindrical joint impose in space?',o:['2','3','4','5'],a:2,w:'6 − f = 6 − 2 = 4.'}],
+ U:[{q:'What is f for a universal joint?',o:['1','2','3','4'],a:1,w:'Two angles are free, so f = 2.'},
+    {q:'How are the two rotation axes of a universal joint arranged?',o:['Parallel and apart','Along the same line','Perpendicular and crossing at one point','At any angle, apart'],a:2,w:'The two axes are at right angles and cross at one point.'},
+    {q:'Which part of a car contains universal joints?',o:['The drive shaft','The door hinge','The sliding seat rail','The wiper nut'],a:0,w:'Drive shafts use Cardan (universal) joints to transmit rotation through changing angles.'}],
+ S:[{q:'What is f for a spherical joint?',o:['1','2','3','6'],a:2,w:'Three rotations about a point are free, so f = 3.'},
+    {q:'Which joint can twist about the link’s own axis and also swing in any direction?',o:['Revolute','Universal','Spherical','Prismatic'],a:2,w:'The spherical joint has all three rotations. A universal joint cannot twist about the axis of the link.'},
+    {q:'How many constraints does a spherical joint impose in space?',o:['2','3','4','5'],a:1,w:'6 − f = 6 − 3 = 3: the two links keep the same point.'}]
+};
+var Q_DOF=[
+ {q:'A bead slides along a straight wire. How many numbers say where it is?',o:['0','1','2','3'],a:1,w:'Only its position along the wire, so 1.'},
+ {q:'A dot is free in space, then you thread it on a wire. How many independent constraints did the wire add?',o:['1','2','3','0'],a:1,w:'The dot went from 3 DoF to 1, so the wire removed 2.'},
+ {q:'A beetle walks on a flat sheet of paper. Treating it as a dot, how many DoF does it have?',o:['1','2','3','6'],a:1,w:'Two numbers, x and y, say where it is on the sheet.'},
+ {q:'Which statement describes the DoF of a system?',o:['The smallest number of independent numbers that fix its configuration','The number of motors it has','The number of moving parts','The number of joints it has'],a:0,w:'Motors, parts and joints can all differ from the DoF. The definition counts independent numbers that fix the configuration.'}
+];
+var Q_2D=[
+ {q:'How many DoF does a rigid body have when it moves in a plane?',o:['2','3','4','6'],a:1,w:'Two numbers for position and one for the angle it points, so 3.'},
+ {q:'Two points on a flat plate have 4 coordinates between them. Why is the plate 3 DoF and not 4?',o:['The distance between the two points is fixed, which removes one','The plate cannot rotate','Points have no coordinates','The table removes one'],a:0,w:'4 coordinates − 1 fixed distance = 3.'},
+ {q:'A plate on a table is held at one point by a pin that lets it turn. How many DoF does it have?',o:['0','1','2','3'],a:1,w:'The pin fixes x and y of that point, so only the angle is left.'},
+ {q:'A pin is held in a straight slot, and the plate can turn about the pin. How many DoF?',o:['1','2','3','4'],a:1,w:'The pin position along the slot is one number and the angle about the pin is another.'}
+];
+var Q_3D=[
+ {q:'How many DoF does a free rigid body have in space?',o:['3','4','6','9'],a:2,w:'Three for position and three for orientation.'},
+ {q:'Three points on a rigid body have 9 coordinates, and the 3 distances between them are fixed. How many DoF does the body have?',o:['3','6','9','12'],a:1,w:'9 − 3 = 6.'},
+ {q:'A block lies flat on a table and can slide and spin about the vertical axis. How many DoF does it have?',o:['2','3','4','6'],a:1,w:'x, y and the yaw angle. The table fixes z, roll and pitch.'},
+ {q:'One corner of a block is held by a ball joint. How many DoF does the block have?',o:['0','1','3','6'],a:2,w:'The corner’s position is fixed, which removes 3. The three rotations about the corner stay free.'}
+];
+var Q_MECH=[
+ {q:'In Grübler’s formula, what does N count?',o:['Links, with the ground counted as one','Joints','Moving links only','Motors'],a:0,w:'N is the number of links, and the ground counts as a link.'},
+ {q:'A planar mechanism has N = 3 links (with the ground) and J = 2 revolute joints. How many DoF does it have?',o:['0','1','2','3'],a:2,w:'DoF = 3(3 − 1 − 2) + 2 = 2. This is the 2R arm.'},
+ {q:'A planar four-bar has N = 4 and J = 4 revolute joints. What does the formula give?',o:['−3','0','1','4'],a:2,w:'DoF = 3(4 − 1 − 4) + 4 = −3 + 4 = 1.'},
+ {q:'What does each joint do in the formula?',o:['It takes away m − f DoF from the moving links','It adds f DoF to the ground','It adds m DoF','It has no effect'],a:0,w:'The N − 1 moving links start with m DoF each. A joint with freedom f removes m − f of them.'}
+];
+
+/* the old twelve questions, with the step each one belongs to, plus four new ones */
+var QUIZ=[
+ {t:'Rigid body',q:'How many degrees of freedom does a rigid body have when it moves in a plane?',o:['2','3','4','6'],a:1,
+  w:'Two numbers for position and one for the angle it points, so 3.'},
+ {t:'Joints',q:'Which joint allows three independent rotations about one point?',o:['Revolute','Universal','Cylindrical','Spherical'],a:3,
+  w:'The spherical joint has f = 3: roll, pitch and yaw about one point. The universal and cylindrical joints have f = 2, and the revolute joint has f = 1.'},
+ {t:'Joints',q:'How many constraints does a universal joint put on the relative motion of two links in space?',o:['2','3','4','5'],a:2,
+  w:'Constraints in space are 6 − f. A universal joint has f = 2, so it imposes 4.'},
+ {t:'Joints',q:'Why does a helical joint (a screw in a nut) have f = 1 and not 2?',
+  o:['Turning and sliding are tied together by the thread pitch','It can only turn and never slide','It can only slide and never turn','The nut is fixed to the ground'],a:0,
+  w:'Once you choose how far to turn the screw, the thread decides how far it slides, so only one number is free.'},
+ {t:'Grübler',q:'A planar four-bar has N = 4 links and J = 4 revolute joints. What does Grübler\'s formula give?',o:['−3','0','1','4'],a:2,
+  w:'DoF = 3(4 − 1 − 4) + 4 = −3 + 4 = 1.'},
+ {t:'Grübler',q:'A planar five-bar has N = 5 links and J = 5 revolute joints. How many DoF does it have?',o:['1','2','3','5'],a:1,
+  w:'DoF = 3(5 − 1 − 5) + 5 = −3 + 5 = 2.'},
+ {t:'Grübler',q:'A spatial chain has one revolute, one universal and one spherical joint, and 4 links including the ground. How many DoF does it have?',o:['3','4','6','9'],a:2,
+  w:'DoF = 6(4 − 1 − 3) + (1 + 2 + 3) = 0 + 6 = 6.'},
+ {t:'Grübler',q:'The parallelogram with a redundant coupler has N = 5 and J = 6, so the formula gives 0, yet it moves. Why?',
+  o:['The equal link lengths make one constraint repeat another','Revolute joints have f = 0 in this case','The ground should not be counted as a link','Printed joints have play'],a:0,
+  w:'The formula only counts links and joints. With equal, parallel links the second coupler repeats a constraint, so the mechanism moves with 1 DoF.'},
+ {t:'Configuration space',q:'What is the configuration space of a planar 2R arm whose joints can turn without limits?',o:['A line segment','A circle','A torus','A sphere'],a:2,
+  w:'Each joint angle lives on a circle, and two circles together make a torus.'},
+ {t:'Workspace',q:'A planar 2R arm has L1 = 2 and L2 = 2, and both joints turn a full circle. What region can the tip reach?',
+  o:['A ring with inner radius 0 and outer radius 2','A full disc of radius 4','A ring with inner radius 2 and outer radius 4','A single circle of radius 4'],a:1,
+  w:'The outer radius is L1 + L2 = 4 and the inner radius is |L1 − L2| = 0, so the ring fills in as a disc.'},
+ {t:'Robots',q:'A robot dog has 4 legs, each with a universal hip and a revolute knee. How many DoF does the whole robot have when its body floats free in space?',o:['12','14','18','24'],a:2,
+  w:'The legs give 4 × 3 = 12 DoF. The free body adds 6, so the total is 18.'},
+ {t:'Robots',q:'In the simplified humanoid, each leg has 6 DoF and each arm has 7 DoF. How many DoF do the limbs have with the trunk held fixed?',o:['13','20','26','32'],a:2,
+  w:'2 × 6 + 2 × 7 = 26. A floating trunk would add 6, giving 32.'}
+];
+(function(){
+  var S={'Rigid body':'dof2d','Joints':'jR','Grübler':'mech','Configuration space':'x1','Workspace':'x1','Robots':'practice'};
+  QUIZ.forEach(function(Q){Q.s=S[Q.t]||'mech';});
+  QUIZ[1].s='jS';QUIZ[2].s='jU';QUIZ[3].s='jH';
+  QUIZ.push({t:'Foundations',s:'dof',q:'A dot on a flat sheet of paper has how many DoF?',o:['1','2','3','6'],a:1,w:'Two numbers, x and y.'});
+  QUIZ.push({t:'3D',s:'dof3d',q:'A block rests flat on a table and can slide and spin about the vertical axis only. How many DoF does it have?',o:['1','2','3','6'],a:2,w:'x, y and yaw. Height, roll and pitch are fixed by the table.'});
+  QUIZ.push({t:'Joints',s:'jC',q:'Which joint lets you turn and slide along the same axis, each one independently?',o:['Helical','Cylindrical','Universal','Prismatic'],a:1,w:'The cylindrical joint has f = 2. In the helical joint the two motions are tied together.'});
+  QUIZ.push({t:'Grübler',s:'mech',q:'A slider-crank has N = 4 links, 3 revolute joints and 1 prismatic joint. How many DoF does it have?',o:['0','1','2','3'],a:1,w:'DoF = 3(4 − 1 − 4) + 4 = 1.'});
+})();
+
+/* ---------- practice: one question per mechanism, with the working shown after answering ---------- */
+var PORDER=[0,1,2,3,5,6,8,9,10,11,4,7];
+function pj(P){var J=0,S=0;KEYS.forEach(function(k){J+=(P.c[k]||0);S+=(P.c[k]||0)*FJ[k];});return {J:J,S:S,dof:P.m*(P.N-1-J)+S};}
+function practiceQ(i){
+  var P=PRESETS[i],r=pj(P),Q={t:P.name.replace(' (calculation only)',''),s:'practice'};
+  if(i===4){
+    Q.q='Grübler’s formula gives 0 for this mechanism (N = 5, J = 6), yet it moves. Which statement is right?';
+    Q.o=['It cannot move, because the formula gives 0','It moves with 1 DoF, because the second coupler repeats the constraint of the first','It moves with 3 DoF, because it is planar','It moves with 6 DoF'];Q.a=1;
+  }else if(i===7){
+    Q.q='Grübler’s formula gives −2 for this mechanism (N = 4, J = 4, space). What happens in reality?';
+    Q.o=['It cannot be assembled','It moves with 1 DoF, because the special link lengths and twists make the constraints redundant','It moves with 2 DoF','It moves with 6 DoF'];Q.a=1;
+  }else{
+    var cand=[r.dof,P.m*(P.N-r.J)+r.S,P.m*(P.N-1-r.J),r.dof+1,r.dof+2,r.dof-1,r.S,P.N,r.J,r.dof+P.m],opts=[],k;
+    for(k=0;k<cand.length&&opts.length<4;k++){if(cand[k]>=0&&opts.indexOf(cand[k])<0){opts.push(cand[k]);}}
+    opts.sort(function(a,b){return a-b;});
+    Q.q='How many DoF does this mechanism have? Move the sliders and count the links and joints in the picture.';
+    Q.o=opts.map(String);Q.a=opts.indexOf(r.dof);
+  }
+  Q.w=(i===4||i===7)?'The formula’s count and the real motion differ here.':'The mechanism has '+r.dof+' DoF.';
+  Q.extra=function(){return practiceWhy(i);};
+  return Q;
+}
+function practiceWhy(i){
+  var P=PRESETS[i],r=pj(P),terms=[];
+  KEYS.forEach(function(k){if(P.c[k]){terms.push(P.c[k]+'×'+FJ[k]);}});
+  var h='<p style="margin:8px 0 0">Count: N = '+P.N+' links with the ground, J = '+r.J+' joints ('+KEYS.filter(function(k){return P.c[k];}).map(function(k){return P.c[k]+' '+k;}).join(', ')+'), so Σf = '+terms.join(' + ')+' = '+r.S+'.</p>'+
+    '<pre style="margin:8px 0 0;padding:8px 10px;background:var(--bg);border-radius:8px;font-family:var(--font-mono);font-size:14px;overflow-x:auto">DoF = '+P.m+'('+P.N+' − 1 − '+r.J+') + '+r.S+' = '+r.dof+'</pre>';
+  if(P.note){h+='<p style="margin:8px 0 0"><strong>'+P.note+'</strong></p>';}
+  h+='<p style="margin:8px 0 0">'+MECH[i].real+'</p>';
+  h+='<div class="mechinfo">'+mechInfoHtml(i)+'</div>';
+  return h;
+}
+
+var STEPS=[
+ {id:'dof',nav:'Degrees of freedom',group:'Foundations',title:'Degrees of freedom',
+  html:'<p>The <strong>degrees of freedom</strong> (DoF) of a system are the smallest number of independent numbers needed to say exactly where it is. A bead on a wire needs one number. A dot on a sheet needs two. A dot in space needs three.</p><p>Pick an example and move it. Count the sliders: that is the DoF. Notice that each restriction takes freedom away: the sheet removes one number from a free dot, and the wire removes two.</p><div id="stage-dof"></div><p class="callout">A dot has position only. Real objects also have an orientation, which adds more numbers. Steps 2 and 3 cover that.</p>',
+  quiz:Q_DOF,qtitle:'Check: degrees of freedom'},
+ {id:'dof2d',nav:'DoF in 2D',group:'Foundations',title:'Degrees of freedom in 2D',
+  html:'<p>A rigid body on a table can slide in two directions and turn. That is three numbers: <strong>x, y and the angle θ</strong>. So a rigid body in the plane has 3 DoF.</p><p>You can also count it from points. Two points on the body have 4 coordinates, but the distance between them is fixed, so 4 − 1 = 3.</p><div id="stage-d2"></div><p class="callout">A joint or a pin works the same way as the wire did: it removes some of the numbers. The next screen does the same in 3D.</p>',
+  quiz:Q_2D,qtitle:'Check: DoF in 2D'},
+ {id:'dof3d',nav:'DoF in 3D',group:'Foundations',title:'Degrees of freedom in 3D',
+  html:'<p>A rigid body in space can slide along three axes and turn about three axes. That is <strong>six numbers</strong>: x, y, z for position, and roll, pitch, yaw for orientation.</p><p>Count from points: three points on the body have 9 coordinates, and the 3 distances between them are fixed, so 9 − 3 = 6.</p><div id="stage-d3"></div><p class="callout">In the plane the numbers were 3. In space they are 6. These are the m values you will see in Grübler’s formula.</p>',
+  quiz:Q_3D,qtitle:'Check: DoF in 3D'},
+ {id:'jR',nav:'Revolute',group:'Joints',joint:'R'},
+ {id:'jP',nav:'Prismatic',group:'Joints',joint:'P'},
+ {id:'jH',nav:'Helical',group:'Joints',joint:'H'},
+ {id:'jC',nav:'Cylindrical',group:'Joints',joint:'C'},
+ {id:'jU',nav:'Universal',group:'Joints',joint:'U'},
+ {id:'jS',nav:'Spherical',group:'Joints',joint:'S'},
+ {id:'mech',nav:'Mechanisms',group:'Mechanisms',title:'Degrees of freedom of a mechanism',
+  html:'<p>A <strong>mechanism</strong> is a set of rigid links connected by joints. A robot arm is one. Its degrees of freedom, also called its <strong>mobility</strong>, is the number of independent joint variables needed to give the pose of every link.</p><p>You can count it with <strong>Grübler’s formula</strong> (Lynch and Park; other books call it the Chebychev–Grübler–Kutzbach criterion):</p><pre>DoF = m (N − 1 − J) + Σ fᵢ</pre><ul><li><strong>m</strong> is 3 for a planar mechanism and 6 for a spatial one.</li><li><strong>N</strong> is the number of links, and the ground counts as a link.</li><li><strong>J</strong> is the number of joints.</li><li><strong>fᵢ</strong> is the freedom of joint i, from the six joints you just met.</li></ul><p class="keypoint">The idea: the N − 1 moving links would have m DoF each if they were free. Each joint takes away m − fᵢ of them.</p><details class="explain"><summary>Worked examples</summary><div class="exbody"><p><strong>Planar four-bar.</strong> N = 4 (three moving links and the ground), J = 4 revolute joints with f = 1 each. DoF = 3(4 − 1 − 4) + 4 = −3 + 4 = 1. One input angle fixes the whole motion.</p><p><strong>Planar 2R arm.</strong> N = 3, J = 2 revolute joints. DoF = 3(3 − 1 − 2) + 2 = 2. Two angles fix the pose of the tip.</p></div></details><details class="explain"><summary>Robot dog and humanoid</summary><div class="exbody"><p>Both robots are counted with the trunk as the ground link, so the result is the DoF of the limbs. A free-floating robot adds 6 for the trunk itself. A free body counts as three prismatic joints and one spherical joint with three massless links between them.</p><ul><li><strong>Robot dog.</strong> Each hip has two crossing motor axes (a universal joint) and each knee is revolute, so a leg has U + R = 3 DoF. Four legs give 12. Floating, the dog has 18.</li><li><strong>Humanoid.</strong> Each leg has a spherical hip, a revolute knee and a universal ankle (6 DoF). Each arm has a spherical shoulder, a revolute elbow and a spherical wrist (7 DoF). The limbs give 26. Floating, it has 32.</li></ul><p>Real robots offset their axes by a few millimetres, so their hips are not exactly universal or spherical, but the DoF count stays the same. This humanoid is a simplified example.</p></div></details><details class="explain"><summary>When the formula is wrong</summary><div class="exbody"><p>The formula only uses the number of links and joints. If the link lengths have special proportions, a mechanism can move more than the formula says. The parallelogram with a redundant coupler and the Bennett mechanism below show this.</p></div></details><p>Try the calculator: pick a preset, move the sliders, and compare the picture with the count.</p><div id="slot-calc"></div>',
+  quiz:Q_MECH,qtitle:'Check: Grübler’s formula'},
+ {id:'practice',nav:'Practice',group:'Mechanisms',title:'Practice: count the DoF',
+  html:'<p>Twelve mechanisms, one at a time. Move the sliders, count the links and joints from the picture, then pick an answer. After answering you see the full working. The last two are the cases where the formula gives the wrong number.</p><div id="practice-host"></div>'},
+ {id:'final',nav:'Final quiz',group:'Mechanisms',title:'Final quiz',
+  html:'<p>Sixteen questions across the whole guide. If you miss one, the result links back to the step to review.</p>',
+  quiz:'final',qtitle:'Final quiz'},
+ {id:'x1',nav:'C-space and workspace',group:'Extras',title:'Extra: where a mechanism can go',
+  html:'<p>This part is optional. It extends the idea of DoF to the shape of all the poses a mechanism can reach.</p><h3>Configuration space</h3><p>The configuration space (C-space) of a mechanism is the set of all its configurations. Its dimension equals the DoF.</p><p>The shape of a joint’s C-space matters. A revolute joint angle repeats every 360°, so 0° and 360° are the same configuration and the angle lives on a circle. A prismatic joint lives on a line segment, ending where the rail ends. A free planar body lives on the plane times a circle, and a free spatial body has six dimensions.</p><p>Two revolute joints in a row give a circle times a circle, which is a torus. Cut the torus open and you get a square whose opposite edges are the same edge. A joint limit removes a region from that square.</p><div class="tablewrap"><table><thead><tr><th>Mechanism</th><th>DoF</th><th>C-space</th></tr></thead><tbody><tr><td>One revolute joint, no limit</td><td class="num">1</td><td>A circle</td></tr><tr><td>One prismatic joint with 56 mm of travel</td><td class="num">1</td><td>A line segment</td></tr><tr><td>Planar 2R arm, no limits</td><td class="num">2</td><td>A torus</td></tr><tr><td>Free planar body</td><td class="num">3</td><td>Plane times a circle</td></tr></tbody></table></div><h3>Workspace and task space</h3><p>The task space is where the task is described, for example the position of a pen tip on a sheet of paper. It is a property of the job. The workspace is the part of the task space the end of the mechanism can reach. It is a property of the mechanism.</p><p>For a planar 2R arm with link lengths L1 and L2, and joints that can turn a full circle, the reachable region is a ring around the base. Its outer radius is L1 + L2 and its inner radius is |L1 − L2|. When L1 = L2 the inner radius is zero and the workspace is a full disc. The 2R preset in step 10 draws this ring.</p><p>Joint limits shrink the workspace and leave the task space unchanged.</p>'},
+ {id:'x2',nav:'Lab with the kit',group:'Extras',title:'Extra: lab activities with the kit',
+  html:'<p>For use with the printed joint kit. The table lists the joints in the kit, then the activities follow.</p><div id="slot-kit"></div><div id="slot-lab"></div>'}
+];
+
+/* ---------- build the steps ---------- */
+var stepsEl=document.getElementById('steps'),pathEl=document.getElementById('path');
+var curStep=0,stages={},practiceIdx=0,practiceDone={};
+
+function jointStepHtml(j){
+  var T=JTXT[j.id],first=(j.id==='R');
+  return '<div class="stepbody">'+
+    (first?'<p class="callout"><strong>What a joint does.</strong> A joint connects two links and limits how one can move relative to the other. A joint that allows f independent motions leaves f DoF and removes 6 − f in space (3 − f in the plane). There are six basic joints. This guide takes them one at a time.</p>':'')+
+    '<p>'+T.lead+'</p></div><div id="slot-joint-'+j.id+'"></div><div class="stepbody"><p class="keypoint">'+T.key+'</p></div><div class="printonly pfigs" id="pj-'+j.id+'"></div>';
+}
+(function(){
+  var lastGroup='',grpEl=null;
+  var JCOL={R:'#c2410c',P:'#1d6fa5',H:'#7c3aed',C:'#0f766e',U:'#b45309',S:'#be185d'};
+  var GCOL={Foundations:'#2f5d8a',Joints:'#555',Mechanisms:'#2e7d4f',Extras:'#7a6a3a'};
+  STEPS.forEach(function(S,i){
+    var j=S.joint?JOINTS.filter(function(x){return x.id===S.joint;})[0]:null;
+    if(j){S.title=j.name+' joint ('+j.id+')';S.html=jointStepHtml(j);S.quiz=JQ[j.id];S.qtitle='Check: '+j.name.toLowerCase()+' joint';}
+    var sec=document.createElement('section');sec.className='step'+(i===0?' first':'')+((i>0&&S.group!==STEPS[i-1].group)?' grp':'');sec.id='step-'+S.id;sec.setAttribute('aria-labelledby','h-'+S.id);
+    var body=S.joint?S.html:'<div class="stepbody">'+S.html+'</div>';
+    var two=!!S.quiz&&S.quiz!=='final';S.two=two;
+    var kick=(S.group==='Extras'?'Extra':'Step '+(i+1)+' of 12')+' · '+S.group;
+    var head='<div class="stephead"><p class="kicker">'+kick+'</p><h2 id="h-'+S.id+'">'+S.title+'</h2></div>';
+    var figs=(S.id==='dof'||S.id==='dof2d'||S.id==='dof3d'?'<div class="printonly pfigs" id="pf-'+S.id+'"></div>':'');
+    if(two){
+      sec.className+=' two p0';
+      sec.innerHTML='<div class="learn">'+head+body+figs+'</div><div class="qpart"><div class="stephead"><p class="kicker">'+kick+' · Quiz</p><h2>'+S.title+'</h2></div><div id="quiz-'+S.id+'"></div></div>';
+    }else{
+      sec.innerHTML=head+body+(S.quiz?'<div id="quiz-'+S.id+'"></div>':'')+figs;
+    }
+    stepsEl.appendChild(sec);
+    /* navigation node */
+    if(S.group!==lastGroup){
+      grpEl=document.createElement('div');grpEl.className='mgroup';
+      grpEl.innerHTML='<span class="mtitle">'+S.group+'</span><div class="mnodes"></div>';
+      pathEl.appendChild(grpEl);lastGroup=S.group;
+    }
+    var col=j?JCOL[j.id]:GCOL[S.group];
+    var b=document.createElement('button');b.type='button';b.dataset.i=i;b.className='node';b.style.setProperty('--nc',col);
+    var lab=j?j.id:(S.group==='Extras'?'+':(i+1));
+    b.innerHTML='<span class="dotc"><b>'+lab+'</b></span><span class="lbl">'+S.nav+'</span>'+(two?'<span class="pips"><i></i><i></i></span>':'');
+    b.addEventListener('click',function(){go(i);});
+    grpEl.lastChild.appendChild(b);S._btn=b;S._sec=sec;
+  });
+})();
+
+/* attach shared pieces and quizzes */
+stages.dof=makeStage(document.getElementById('stage-dof'),FOUND.dof);
+stages.d2=makeStage(document.getElementById('stage-d2'),FOUND.d2);
+stages.d3=makeStage(document.getElementById('stage-d3'),FOUND.d3);
+document.getElementById('slot-calc').appendChild(document.getElementById('calcBox'));
+document.getElementById('slot-kit').appendChild(document.getElementById('kitBox'));
+document.getElementById('slot-lab').appendChild(document.getElementById('lab'));
+STEPS.forEach(function(S){
+  if(!S.quiz){return;}
+  var host=document.getElementById('quiz-'+S.id);
+  makeQuiz(host,S.id,S.qtitle,S.quiz==='final'?QUIZ:S.quiz);
+});
+
+/* practice step: pager of 12 items, one question each */
+(function(){
+  var host=document.getElementById('practice-host');
+  host.innerHTML='<div class="pdots" id="pdots" role="group" aria-label="Mechanisms"></div><div id="pitems"></div><div class="qresult" id="presult"></div>';
+  var dots=document.getElementById('pdots'),items=document.getElementById('pitems');
+  QSTATE.practice={n:PORDER.length,done:0,score:0,missed:[]};
+  PORDER.forEach(function(pi,k){
+    var d=document.createElement('button');d.type='button';d.textContent=k+1;d.setAttribute('aria-label','Mechanism '+(k+1));
+    d.addEventListener('click',function(){showPractice(k);});dots.appendChild(d);
+    var it=document.createElement('div');it.className='pitem';it.id='pitem-'+k;
+    var slot=document.createElement('div');slot.className='mechslot';
+    var pf=document.createElement('div');pf.className='printonly pfigs';pf.id='pp-'+k;
+    var Q=practiceQ(pi);
+    var card=questionCard(Q,'Mechanism '+(k+1)+' of '+PORDER.length+' · '+Q.t,function(right){
+      var st=QSTATE.practice;st.done++;if(right){st.score++;}
+      dots.children[k].className=right?'right':'wrong';
+      var sum=document.getElementById('presult');
+      if(st.done===st.n){sum.innerHTML='<strong>You got '+st.score+' of '+st.n+'.</strong>';sum.style.display='flex';}
+      refreshNav();
+    });
+    it.appendChild(slot);it.appendChild(pf);it.appendChild(card);items.appendChild(it);
+  });
+})();
+
+/* ---------- navigation ---------- */
+function refreshNav(){
+  STEPS.forEach(function(S){
+    var q=QSTATE[S.id],ok=q&&q.done===q.n;
+    if(S._btn){S._btn.classList.toggle('done',!!ok);}
+  });
+  var nd=0;STEPS.forEach(function(S,k){if(k<12&&S._btn.classList.contains('done')){nd++;}});
+  document.getElementById('progbar').style.width=(nd/12*100)+'%';
+  document.getElementById('progtxt').textContent=nd+' of 12 steps complete';
+}
+var mechStage=document.getElementById('mechStage'),mechGrid=document.getElementById('mechGrid'),mechInfoBox=document.getElementById('mechinfo');
+function homeMech(){if(mechStage.parentNode!==mechGrid){mechGrid.insertBefore(mechStage,mechGrid.firstChild);}}
+function showPractice(k){
+  practiceIdx=k;
+  Array.prototype.forEach.call(document.querySelectorAll('.pitem'),function(el,i){el.classList.toggle('on',i===k);});
+  Array.prototype.forEach.call(document.getElementById('pdots').children,function(d,i){d.setAttribute('aria-current',i===k?'true':'false');});
+  var slot=document.querySelector('#pitem-'+k+' .mechslot');slot.appendChild(mechStage);
+  setMech(PORDER[k]);
+}
+function onEnter(S){
+  if(S.joint){
+    var slot=document.getElementById('slot-joint-'+S.joint);slot.appendChild(document.getElementById('jointViewer'));
+    select(JOINTS.filter(function(x){return x.id===S.joint;})[0]);
+  }else if(S.id==='mech'){
+    homeMech();setMech(st.preset>=0?st.preset:1);
+  }else if(S.id==='practice'){
+    showPractice(practiceIdx);
+  }else if(S.id==='dof'){stages.dof.draw();}
+  else if(S.id==='dof2d'){stages.d2.draw();}
+  else if(S.id==='dof3d'){stages.d3.draw();}
+}
+var curPage=0;
+function go(i,noScroll,page){
+  i=Math.max(0,Math.min(STEPS.length-1,i));
+  curStep=i;
+  var S=STEPS[i];
+  curPage=(S.two&&page===1)?1:0;
+  STEPS.forEach(function(T,k){
+    T._sec.classList.toggle('on',k===i);
+    if(k<i){T._btn.classList.add('visited');}else{T._btn.classList.toggle('visited',false);}
+    if(k===i){T._btn.setAttribute('aria-current','step');}else{T._btn.removeAttribute('aria-current');}
+    var pips=T._btn.querySelectorAll('.pips i');
+    if(pips.length){pips[0].className=(k<=i)?'on':'';pips[1].className=(k<i||(k===i&&curPage===1))?'on':'';if(k===i){pips[curPage].classList.add('cur');}}
+  });
+  S._sec.classList.toggle('p0',curPage===0);S._sec.classList.toggle('p1',curPage===1);
+  onEnter(S);
+  var last=(i===STEPS.length-1&&(!S.two||curPage===1));
+  document.getElementById('back').disabled=(i===0&&curPage===0);
+  var nx=document.getElementById('next');nx.disabled=last;
+  nx.textContent=(S.two&&curPage===0)?'Quiz':((i===11&&(!S.two||curPage===1))?'Extras':'Next');
+  document.getElementById('where').textContent=(S.group==='Extras'?'Extra · ':'Step '+(i+1)+' of 12 · ')+S.nav+(S.two?(curPage?' · Quiz':' · Learn'):'');
+  try{S._btn.scrollIntoView({block:'nearest',inline:'center'});}catch(e){}
+  if(!noScroll){try{window.scrollTo(0,0);}catch(e){}}
+  try{history.replaceState(null,'','#'+S.id+(curPage?'/quiz':''));}catch(e){}
+}
+function goNext(){var S=STEPS[curStep];if(S.two&&curPage===0){go(curStep,false,1);}else{go(curStep+1);}}
+function goBack(){if(STEPS[curStep].two&&curPage===1){go(curStep,false,0);}else if(curStep>0){var P=STEPS[curStep-1];go(curStep-1,false,P.two?1:0);}}
+document.getElementById('back').addEventListener('click',goBack);
+document.getElementById('next').addEventListener('click',goNext);
+document.addEventListener('keydown',function(e){
+  if(e.target&&/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){return;}
+  if(e.key==='ArrowRight'&&!e.altKey&&!e.metaKey){goNext();}
+  if(e.key==='ArrowLeft'&&!e.altKey&&!e.metaKey){goBack();}
+});
+buildChips();
+(function(){
+  var h=(location.hash||'').replace('#',''),pg=/\/quiz$/.test(h)?1:0;h=h.replace(/\/quiz$/,'');var k=stepNumber(h);
+  go(k>=0?k:0,true,pg);
+})();
+
+/* ---------- print: every step in order, static figures, lettered quiz options, optional instructor key ---------- */
+var printReady=false;
+function cellsFor(j){
+  return CELLS.map(function(c,i){var s=j.free[i],cls=s==='1'?'free':(s==='c'?'coupled':'');return '<div class="cell '+cls+'">'+c[0]+'<small>'+c[1]+'</small></div>';}).join('');
+}
+function printCanvas(scene,vw,axes,w,h){var c=document.createElement('canvas');c._w=w;c._h=h;c._dpr=2;c._light=true;render(c,scene,vw,axes);return c;}
+function card(fig,factsHtml,small){
+  var d=document.createElement('div');d.className='pcard'+(small?' small':'');
+  var f=document.createElement('div');f.className='pfig';f.appendChild(fig);
+  var t=document.createElement('div');t.className='pfacts';t.innerHTML=factsHtml;
+  d.appendChild(f);d.appendChild(t);return d;
+}
+function buildPrintFigures(){
+  var key={dof:FOUND.dof,dof2d:FOUND.d2,dof3d:FOUND.d3};
+  Object.keys(key).forEach(function(id){
+    var host=document.getElementById('pf-'+id);
+    key[id].forEach(function(it){
+      host.appendChild(card(printCanvas(SCENE[it.id](it.init),{yaw:it.view[0],tilt:it.view[1]},true,640,400),stageFacts(it),true));
+    });
+  });
+  JOINTS.forEach(function(j){
+    var v={};j.sliders.forEach(function(s){v[s.k]=s.init;});
+    var planar=(j.id==='R'||j.id==='P')?'3 − '+j.f+' = '+(3-j.f):'not used in the plane';
+    document.getElementById('pj-'+j.id).appendChild(card(printCanvas(BUILD[j.id](v),{yaw:-38,tilt:24},true,720,440),
+      '<div class="facthead"><div class="badge" style="--jc:'+HEX[j.id]+'">'+j.id+'</div><h3>'+j.name+' joint</h3></div><p>'+j.motion+'</p><div class="dofgrid" style="--jc:'+HEX[j.id]+'">'+cellsFor(j)+'</div>'+
+      '<dl><dt>DoF f</dt><dd class="eq">'+j.f+'</dd><dt>Constraints</dt><dd class="eq">6 − '+j.f+' = '+(6-j.f)+' in space</dd><dt>In the plane</dt><dd class="eq">'+planar+'</dd><dt>Everyday</dt><dd>'+j.example+'</dd></dl>'));
+  });
+  PORDER.forEach(function(pi,k){
+    var M=MECH[pi],v={};M.sliders.forEach(function(s){v[s.k]=s.init;});
+    var d=document.createElement('div');d.className='pfig';
+    d.appendChild(printCanvas(M.build(v),{yaw:M.view[0],tilt:M.view[1]},false,760,430));
+    var wrap=document.getElementById('pp-'+k);wrap.appendChild(d);
+    wrap.insertAdjacentHTML('beforeend','<p class="sub">Count N and J from this picture. Joint types are shown by colour: R blue, P red, H amber, C green, U purple, S pink.</p>');
+  });
+}
+function preparePrint(){
+  if(!printReady){buildPrintFigures();printReady=true;}
+  var ans=ANS||document.getElementById('showAns').checked;
+  document.body.classList.toggle('answers',ans);
+  document.getElementById('lab').classList.toggle('show',ans);
+  /* instructor key per quiz, read from the option order on the page */
+  Array.prototype.forEach.call(document.querySelectorAll('.printkey'),function(k){k.parentNode.removeChild(k);});
+  var L='ABCDEFGH';
+  Array.prototype.forEach.call(document.querySelectorAll('.quizhost'),function(h){
+    var rows='';
+    Array.prototype.forEach.call(h.querySelectorAll('.q'),function(c){
+      var opts=c.querySelectorAll('.qopt'),i,pos=-1;
+      for(i=0;i<opts.length;i++){if(opts[i].dataset.c){pos=i;}}
+      rows+='<li><strong>'+L.charAt(pos)+'</strong>. '+esc(c._Q.w)+'</li>';
+    });
+    var k=document.createElement('div');k.className='printkey';k.innerHTML='<strong>Instructor key</strong><ol>'+rows+'</ol>';h.appendChild(k);
+  });
+  var pi=document.getElementById('practice-host');
+  if(pi){
+    var rows='';
+    Array.prototype.forEach.call(pi.querySelectorAll('.q'),function(c,i){
+      var opts=c.querySelectorAll('.qopt'),j,pos=-1;for(j=0;j<opts.length;j++){if(opts[j].dataset.c){pos=j;}}
+      var P=PRESETS[PORDER[i]],r=pj(P);
+      rows+='<li><strong>'+L.charAt(pos)+'</strong>. '+esc(P.name)+': DoF = '+P.m+'('+P.N+' − 1 − '+r.J+') + '+r.S+' = '+r.dof+(P.note?'. '+esc(P.note):'')+'</li>';
+    });
+    var k=document.createElement('div');k.className='printkey';k.innerHTML='<strong>Instructor key</strong><ol>'+rows+'</ol>';pi.appendChild(k);
+  }
+}
+window.addEventListener('beforeprint',preparePrint);
+if(PRINT){preparePrint();document.body.classList.add('printing');}
+
+})();
+</script>
+</body>
+</html>
