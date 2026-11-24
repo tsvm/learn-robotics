@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn Robotics: Coordinate Frames and Rigid-Body Motion</title>
+<style>
+:root{
+  --bg:#eceff4; --card:#fff; --ink:#1d2433; --mute:#5d677a; --line:#e3e7ee;
+  --accent:#4f46e5; --accent-soft:#eceafd; --ok:#177a45; --ok-bg:#e7f6ee; --no:#b3261e; --no-bg:#fdecea;
+  --ax:#d9483a; --ay:#2a9d5c; --az:#2f6fdb; --warn:#fff6dc;
+  --shadow:0 6px 24px rgba(25,35,70,.08), 0 1px 3px rgba(25,35,70,.06);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:auto}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:900px;margin:0 auto;padding:14px 12px 110px}
+.card{background:var(--card);border-radius:28px;box-shadow:var(--shadow);padding:26px 28px;margin:0 0 16px}
+h1{font-size:clamp(1.55rem,4.6vw,2.2rem);line-height:1.2;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:clamp(1.3rem,3.8vw,1.65rem);line-height:1.25;margin:0 0 12px}
+h3{font-size:1.12rem;margin:26px 0 8px}
+p{margin:0 0 12px}
+.lede{color:var(--mute);font-size:1.05rem;margin:0}
+.hero{padding:30px 30px 26px}
+.stepno{display:inline-block;font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:3px 12px;border-radius:99px;margin-bottom:10px}
+.goal{background:var(--accent-soft);border-radius:18px;padding:12px 16px;margin:0 0 6px}
+sub,sup{line-height:0}
+i.v{font-style:italic;font-family:Georgia,"Times New Roman",serif}
+.hat{position:relative;display:inline-block;font-style:italic;font-family:Georgia,"Times New Roman",serif}
+.hat::before{content:"^";position:absolute;left:50%;top:-.42em;transform:translateX(-50%);font-style:normal;font-size:.85em}
+.fx{font-family:Georgia,"Times New Roman",serif;font-style:normal}
+.key{background:#f6f7fb;border:1px solid var(--line);border-radius:18px;padding:12px 18px;margin:12px 0;text-align:center;font-family:Georgia,"Times New Roman",serif;font-size:1.08rem;overflow-x:auto}
+.callout{border-radius:18px;padding:12px 16px;margin:14px 0;background:var(--warn)}
+.callout.tip{background:var(--ok-bg)}
+.callout.try{background:var(--accent-soft)}
+.callout b.t{display:block;margin-bottom:2px}
+.example{border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:18px;padding:12px 18px;margin:14px 0;background:#fcfcff}
+.example>b:first-child{display:block;margin-bottom:4px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin:3px 0}
+table.t{border-collapse:separate;border-spacing:0;width:100%;margin:12px 0;font-size:.95rem;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+table.t th,table.t td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.t th{background:#f6f7fb}
+table.t tr:last-child td{border-bottom:0}
+/* matrices */
+table.mx{display:inline-table;border-collapse:collapse;margin:0 6px;vertical-align:middle;font-family:Georgia,"Times New Roman",serif;border-left:2px solid var(--ink);border-right:2px solid var(--ink);border-radius:6px}
+table.mx td{padding:1px 8px;text-align:right;white-space:nowrap}
+table.mx.sm td{padding:0 5px;font-size:.92rem}
+table.mx td.c0{color:var(--ax)} table.mx td.c1{color:var(--ay)} table.mx td.c2{color:var(--az)}
+table.mx td.pc{color:#8a4b00;font-weight:600}
+.mxrow{text-align:center;margin:10px 0;overflow-x:auto;white-space:nowrap}
+.mxrow .op{font-family:Georgia,serif;padding:0 4px}
+/* viz */
+.viz{border:1px solid var(--line);border-radius:22px;padding:12px;margin:16px 0;background:#fbfcfe}
+.viz canvas{display:block;width:100%;height:auto;border-radius:16px;background:#fff;touch-action:pan-y;cursor:grab}
+.viz canvas:active{cursor:grabbing}
+.viz .cap{color:var(--mute);font-size:.88rem;margin:8px 4px 2px}
+.viz .ctl{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;margin-top:10px}
+.viz .ctl label{display:flex;flex-direction:column;font-size:.86rem;color:var(--mute)}
+.viz .ctl label .top{display:flex;justify-content:space-between;gap:8px}
+.viz .ctl output{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.viz input[type=range]{width:100%;accent-color:var(--accent)}
+.viz .read{margin-top:10px;background:#f6f7fb;border-radius:16px;padding:10px 12px;font-size:.92rem;overflow-x:auto}
+.viz .btns{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-size:.88rem;border:1px solid var(--line);background:#fff;border-radius:99px;padding:5px 14px;cursor:pointer;color:var(--ink)}
+.btn:hover{background:var(--accent-soft)}
+.chk{font-size:.88rem;color:var(--mute);display:inline-flex;align-items:center;gap:6px;margin-top:8px}
+@media(max-width:560px){.viz .ctl{grid-template-columns:1fr}.card{padding:20px 16px;border-radius:24px}.hero{padding:22px 18px}}
+/* step map */
+.mapcard{padding:14px 12px 12px}
+.prog{height:8px;background:#eceef4;border-radius:99px;overflow:hidden;margin:2px 10px 10px}
+.prog>div{height:100%;width:0;background:linear-gradient(90deg,#6f66f0,var(--accent));border-radius:99px;transition:width .3s}
+.progtxt{font-size:.8rem;color:var(--mute);margin:-4px 12px 8px}
+.map{display:flex;gap:18px;overflow-x:auto;padding:4px 8px 8px;scrollbar-width:thin}
+.grp{flex:0 0 auto}
+.grp .gl{font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--mute);margin:0 0 6px 4px}
+.nodes{display:flex}
+.node{position:relative;width:86px;border:0;background:none;font:inherit;cursor:pointer;padding:0 2px;text-align:center;color:var(--ink)}
+.node::before{content:"";position:absolute;top:17px;left:-50%;width:100%;height:3px;background:var(--line);z-index:0}
+.node:first-child::before{display:none}
+.node.done::before{background:#9be0bb}
+.bdg{position:relative;z-index:1;width:36px;height:36px;margin:0 auto;border-radius:50%;background:#f1f3f8;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;color:var(--mute)}
+.node.done .bdg{background:var(--ok-bg);border-color:#9be0bb;color:var(--ok)}
+.node.cur .bdg{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 5px var(--accent-soft)}
+.node .ck{position:absolute;z-index:2;top:-4px;right:calc(50% - 25px);width:16px;height:16px;border-radius:50%;background:var(--ok);color:#fff;font-size:.62rem;line-height:16px;display:none}
+.node.done .ck{display:block}
+.nl{display:block;font-size:.72rem;line-height:1.2;margin-top:5px;color:var(--mute)}
+.node.cur .nl{color:var(--ink);font-weight:600}
+.dots{display:flex;gap:4px;justify-content:center;margin-top:4px}
+.dots i{width:7px;height:7px;border-radius:50%;background:#d9dde7}
+.dots i.on{background:var(--accent)}
+/* quiz */
+.qhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.score{font-weight:700;color:var(--accent)}
+.q{border:1px solid var(--line);border-radius:22px;padding:16px 18px;margin:14px 0}
+.qt{font-weight:600;margin-bottom:10px}
+.qt .n{display:inline-block;min-width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:var(--accent-soft);color:var(--accent);margin-right:8px;font-size:.85rem}
+.opts{display:grid;gap:8px}
+.opt{display:flex;gap:10px;align-items:center;text-align:left;font:inherit;background:#fff;border:2px solid var(--line);border-radius:16px;padding:9px 14px;cursor:pointer;color:var(--ink)}
+.opt:hover:not(:disabled){border-color:var(--accent);background:#fafaff}
+.opt .L{flex:0 0 26px;height:26px;border-radius:50%;background:#f1f3f8;text-align:center;line-height:26px;font-size:.8rem;font-weight:700;color:var(--mute)}
+.opt:disabled{cursor:default}
+.opt.correct{border-color:#58c08a;background:var(--ok-bg)}
+.opt.wrong{border-color:#e48a83;background:var(--no-bg)}
+.opt.dim{opacity:.6}
+.fb{margin-top:10px;border-radius:16px;padding:10px 14px;font-size:.95rem}
+.fb.ok{background:var(--ok-bg)} .fb.no{background:var(--no-bg)}
+.fb .rv{display:inline-block;margin-top:4px;font-weight:600;color:var(--accent);text-decoration:none}
+.sum{background:var(--accent-soft);border-radius:20px;padding:14px 18px;margin-top:16px}
+.sum a{color:var(--accent);font-weight:600}
+/* footer + pager */
+footer.card{font-size:.92rem;color:var(--mute)}
+footer h4{margin:10px 0 4px;color:var(--ink);font-size:.95rem}
+#pager{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:6px;background:#fff;border-radius:99px;box-shadow:0 8px 30px rgba(25,35,70,.18),0 1px 3px rgba(25,35,70,.1);padding:6px;max-width:calc(100vw - 20px)}
+#pager button{font:inherit;font-weight:600;border:0;border-radius:99px;padding:10px 22px;cursor:pointer;background:var(--accent);color:#fff}
+#pager button.ghost{background:#f1f3f8;color:var(--ink)}
+#pager button:disabled{opacity:.35;cursor:default}
+#pager .pos{font-size:.8rem;color:var(--mute);padding:0 8px;min-width:84px;text-align:center;white-space:nowrap}
+/* print */
+.pstep{margin-top:18px}
+.pstep.brk{page-break-before:always;margin-top:0}
+.pq{margin:10px 0 14px;break-inside:avoid}
+.pq ol{list-style:upper-alpha;margin:4px 0 0}
+.key-ans h3{margin-top:18px}
+.key-ans p{margin:4px 0}
+body.print{background:#fff;font-size:11pt}
+body.print .wrap{max-width:none;padding:0}
+body.print .card{box-shadow:none;border-radius:0;padding:0;margin:0 0 10px;border:0}
+body.print #pager,body.print #map,body.print .viz .ctl,body.print .viz .btns,body.print .viz .chk,body.print .viz .cap.live{display:none!important}
+body.print .viz{border:0;padding:0;break-inside:avoid}
+body.print .viz canvas{cursor:default}
+body.print .hero{border-bottom:2px solid var(--ink);padding-bottom:10px}
+@media print{
+  @page{size:A4;margin:15mm 14mm}
+  body{background:#fff}
+  .wrap{max-width:none;padding:0}
+  .card{box-shadow:none;border-radius:0;border:0;padding:0}
+  #pager,.mapcard,.viz .ctl,.viz .btns,.viz .chk{display:none!important}
+  .viz{border:0;padding:0;break-inside:avoid}
+  h2,h3{break-after:avoid}
+  .example,.callout,.key,table.t{break-inside:avoid}
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="card hero">
+<h1>Learn Robotics: Coordinate Frames and Rigid-Body Motion</h1>
+<p class="lede">Learn how to say where a robot part is and how it moves: frames, rotations and transforms, all the way to the tool of a robot arm.</p>
+</header>
+<nav class="card mapcard" id="map" aria-label="Step map"></nav>
+<main id="stage"></main>
+<footer class="card">
+<p>Made by Tsvetomila Mihaylova and Claude.</p>
+<h4>References</h4>
+<p>Lynch, K. M. and Park, F. C. <i>Modern Robotics: Mechanics, Planning, and Control</i>. Cambridge University Press, 2017. Chapter 3, Rigid-Body Motions.</p>
+</footer>
+</div>
+<div id="pager"><button class="ghost" id="back">Back</button><span class="pos" id="pos"></span><button id="next">Next</button></div>
+<script>
+/* Library-free 3D renderer: perspective camera, orbit by drag, depth-sorted lines/arrows/dots/text on a 2D canvas. */
+const V3 = {
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  mul: (a, k) => [a[0] * k, a[1] * k, a[2] * k],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  len: a => Math.hypot(a[0], a[1], a[2]),
+  norm: a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+};
+
+class Viewer {
+  /* canvas: target canvas; build(S): fills scene S each frame; opts: az, el, dist, target, focal */
+  constructor(canvas, build, opts = {}) {
+    this.c = canvas; this.ctx = canvas.getContext('2d');
+    this.build = build;
+    this.az0 = opts.az ?? 30; this.el0 = opts.el ?? 22;
+    this.az = this.az0; this.el = this.el0;
+    this.dist = opts.dist ?? 9;
+    this.target = opts.target ?? [0, 0, 0.6];
+    this.focal = (opts.focal ?? 0.9) * canvas.width;
+    this._drag = null;
+    const down = e => { this._drag = { x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch (_) {} };
+    const move = e => {
+      if (!this._drag) return;
+      const k = canvas.width / (canvas.getBoundingClientRect().width || canvas.width);
+      this.az -= (e.clientX - this._drag.x) * 0.35 * k;
+      if (e.pointerType !== 'touch') this.el = Math.max(-5, Math.min(85, this.el + (e.clientY - this._drag.y) * 0.3 * k));
+      this._drag = { x: e.clientX, y: e.clientY };
+      this.draw();
+    };
+    const up = () => { this._drag = null; };
+    canvas.addEventListener('pointerdown', down);
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointerup', up);
+    canvas.addEventListener('pointercancel', up);
+  }
+  resetView() { this.az = this.az0; this.el = this.el0; this.draw(); }
+
+  /* world -> screen; returns {x, y, d} with d = depth along view direction */
+  project(p) {
+    const az = this.az * Math.PI / 180, el = this.el * Math.PI / 180;
+    const dir = [Math.cos(el) * Math.cos(az), Math.cos(el) * Math.sin(az), Math.sin(el)];
+    const pos = V3.add(this.target, V3.mul(dir, this.dist));
+    const f = V3.norm(V3.mul(dir, -1));
+    const r = V3.norm(V3.cross(f, [0, 0, 1]));
+    const u = V3.cross(r, f);
+    const v = V3.sub(p, pos);
+    const d = Math.max(V3.dot(v, f), 0.2);
+    return { x: this.c.width / 2 + this.focal * V3.dot(v, r) / d, y: this.c.height / 2 - this.focal * V3.dot(v, u) / d, d };
+  }
+
+  draw() {
+    const items = [];
+    const S = {
+      line: (a, b, o = {}) => items.push({ t: 'line', a, b, ...o }),
+      arrow: (a, b, o = {}) => items.push({ t: 'arrow', a, b, ...o }),
+      dot: (p, o = {}) => items.push({ t: 'dot', p, ...o }),
+      text: (p, txt, o = {}) => items.push({ t: 'text', p, txt, ...o }),
+    };
+    this.build(S);
+    const ctx = this.ctx, W = this.c.width, H = this.c.height, u = W / 1000;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    for (const it of items) {
+      if (it.t === 'line' || it.t === 'arrow') { it.pa = this.project(it.a); it.pb = this.project(it.b); it.z = (it.pa.d + it.pb.d) / 2; }
+      else { it.pp = this.project(it.p); it.z = it.pp.d; }
+      if (it.bg) it.z = 1e6; // background items always first
+      if (it.t === 'text') it.z -= 0.001; // labels just in front of their anchors
+    }
+    items.sort((a, b) => b.z - a.z);
+    for (const it of items) {
+      ctx.save();
+      ctx.globalAlpha = it.alpha ?? 1;
+      if (it.t === 'line' || it.t === 'arrow') {
+        ctx.strokeStyle = it.color || '#333'; ctx.lineWidth = (it.w || 2) * u * 1.6; ctx.lineCap = 'round';
+        ctx.setLineDash(it.dash ? it.dash.map(x => x * u * 1.6) : []);
+        ctx.beginPath(); ctx.moveTo(it.pa.x, it.pa.y); ctx.lineTo(it.pb.x, it.pb.y); ctx.stroke();
+        if (it.t === 'arrow') {
+          const dx = it.pb.x - it.pa.x, dy = it.pb.y - it.pa.y, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l;
+          const hs = (it.head || 20) * u * (it.w >= 3 ? 1.15 : 1);
+          ctx.setLineDash([]); ctx.fillStyle = it.color || '#333'; ctx.beginPath();
+          ctx.moveTo(it.pb.x, it.pb.y);
+          ctx.lineTo(it.pb.x - ux * hs + uy * hs * 0.38, it.pb.y - uy * hs - ux * hs * 0.38);
+          ctx.lineTo(it.pb.x - ux * hs - uy * hs * 0.38, it.pb.y - uy * hs + ux * hs * 0.38);
+          ctx.closePath(); ctx.fill();
+        }
+      } else if (it.t === 'dot') {
+        const r = (it.r || 7) * u * 1.6;
+        ctx.fillStyle = it.color || '#333'; ctx.beginPath(); ctx.arc(it.pp.x, it.pp.y, r, 0, 7); ctx.fill();
+        if (it.ring) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5 * u; ctx.stroke(); }
+      } else if (it.t === 'text') {
+        const sz = (it.size || 30) * u * (W < 800 ? 1.35 : 1);
+        ctx.fillStyle = it.color || '#222'; ctx.textBaseline = 'middle';
+        ctx.font = `${it.italic === false ? '' : 'italic '}${it.bold ? 'bold ' : ''}${sz}px Georgia, "Times New Roman", serif`;
+        const x = it.pp.x + (it.dx || 0) * u, y = it.pp.y + (it.dy || 0) * u;
+        ctx.textAlign = it.sub ? 'left' : 'center';
+        if (it.sub) {
+          const w1 = ctx.measureText(it.txt).width;
+          ctx.fillText(it.txt, x - w1 / 2, y);
+          ctx.font = `${sz * 0.68}px Georgia, serif`;
+          ctx.fillText(it.sub, x + w1 / 2, y + sz * 0.22);
+        } else ctx.fillText(it.txt, x, y);
+      }
+      ctx.restore();
+    }
+  }
+}
+
+/* ---- small matrix toolkit (row-major arrays of arrays) ---- */
+const MT = {
+  I3: () => [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+  mul: (A, B) => A.map((r, i) => B[0].map((_, j) => r.reduce((s, _, k) => s + A[i][k] * B[k][j], 0))),
+  tr: A => A[0].map((_, j) => A.map(r => r[j])),
+  mv: (A, v) => A.map(r => r.reduce((s, a, k) => s + a * v[k], 0)),
+  det3: m => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]),
+  Rx: a => { const c = Math.cos(a), s = Math.sin(a); return [[1, 0, 0], [0, c, -s], [0, s, c]]; },
+  Ry: a => { const c = Math.cos(a), s = Math.sin(a); return [[c, 0, s], [0, 1, 0], [-s, 0, c]]; },
+  Rz: a => { const c = Math.cos(a), s = Math.sin(a); return [[c, -s, 0], [s, c, 0], [0, 0, 1]]; },
+  T: (R, p) => [[...R[0], p[0]], [...R[1], p[1]], [...R[2], p[2]], [0, 0, 0, 1]],
+  Rp: T => [T.slice(0, 3).map(r => r.slice(0, 3)), [T[0][3], T[1][3], T[2][3]]],
+  deg: d => d * Math.PI / 180,
+};
+
+/* Content helpers + learn pages (simple version: one big idea per step) */
+const hat = c => `<i class="v">${c}</i>`;
+const XH = hat('x'), YH = hat('y'), ZH = hat('z');
+const R_ = s => `<i class="v">R</i><sub>${s}</sub>`;
+const P_ = s => `<i class="v">p</i><sub>${s}</sub>`;
+const T_ = s => `<i class="v">T</i><sub>${s}</sub>`;
+
+/* number formatting: true minus sign, no "-0", trims trailing zeros */
+function fmtN(x, d = 3, fixed = false) {
+  if (typeof x === 'string') return x;
+  if (Math.abs(x) < 0.5 * Math.pow(10, -d)) x = 0;
+  let s = fixed ? x.toFixed(d) : String(+x.toFixed(d));
+  return s.replace('-', '−');
+}
+/* matrix as HTML table. o.cols colours the first three columns by axis; o.pcol highlights the last column (position) */
+function mx(rows, o = {}) {
+  const n = rows[0].length;
+  const body = rows.map(r => '<tr>' + r.map((v, j) => {
+    let c = '';
+    if (o.cols && j < 3) c = ' class="c' + j + '"';
+    if (o.pcol && j === n - 1 && rows.length === 4) c = ' class="pc"';
+    return `<td${c}>${typeof v === 'number' ? fmtN(v, o.d ?? 3, o.fixed) : v}</td>`;
+  }).join('') + '</tr>').join('');
+  return `<table class="mx${o.sm ? ' sm' : ''}">${body}</table>`;
+}
+const Z90 = [[0, -1, 0], [1, 0, 0], [0, 0, 1]];
+
+const STEPS = [
+  /* ---------------------------------------------------------------- 1 */
+  {
+    id: 'frames', badge: '1', group: 'Foundations', label: 'Frames',
+    title: 'What a frame is',
+    learn: () => `
+<p class="goal"><b>Big idea.</b> To say where something is, you first pick a <b>frame</b>: a starting point and three directions.</p>
+<h3>A frame is a corner and three arrows</h3>
+<p>Picture the corner of a room. The corner is the <b>origin</b>. Along the two floor edges and up the wall run three arrows at right angles to each other: the <b>x, y and z axes</b>.</p>
+<p>The point (2, 1, 3) then means: from the corner, go 2 along x, 1 along y and 3 along z.</p>
+<h3>The right-hand rule</h3>
+<p>Robotics frames are always <b>right-handed</b>. Hold out your right hand with thumb, index finger and middle finger at right angles. Thumb = x, index finger = y, middle finger = z.</p>
+<div class="viz" data-viz="basic"></div>
+<h3>Two frames you will see everywhere</h3>
+<ul>
+<li><b>Space frame {s}:</b> fixed in the world, like the corner of a lab or a robot's base.</li>
+<li><b>Body frame {b}:</b> glued to a moving object, like a gripper. It travels with the object.</li>
+</ul>
+<div class="callout tip"><b class="t">The one question behind this whole guide</b>Where is {b}, as seen from {s}? The next five steps are the tools for answering it.</div>`
+  },
+  /* ---------------------------------------------------------------- 2 */
+  {
+    id: 'points', badge: '2', group: 'Foundations', label: 'Points',
+    title: 'Describing a point in different frames',
+    learn: () => `
+<p class="goal"><b>Big idea.</b> One point can have different coordinates in different frames. The point does not move. Only the numbers change.</p>
+<h3>Coordinates are an address</h3>
+<p>A house has one location but many possible addresses, depending on the map you use. Coordinates work the same way. We write ${P_('s')} for the coordinates of a point in frame {s}, and ${P_('b')} for the same point in frame {b}.</p>
+<div class="example"><b>Example: frame {b} is just shifted</b>
+<p>{b} has the same directions as {s}, but its origin sits at (2, 1, 0). A point is at (5, 4, 0) in {s}. From {b}'s origin it is 5 &minus; 2 = 3 along x and 4 &minus; 1 = 3 along y.</p>
+<div class="key">${P_('b')} = ${P_('s')} &minus; (origin of {b}) = (3, 3, 0)</div></div>
+<div class="viz" data-viz="points"></div>
+<div class="callout try"><b class="t">Try it</b>Slide the turn control. The orange point stays put, but its {b} numbers change.</div>
+<p>When a frame is also <i>turned</i>, subtracting is not enough. The numbers get mixed between x, y and z. Rotation matrices (next step) handle that.</p>`
+  },
+  /* ---------------------------------------------------------------- 3 */
+  {
+    id: 'rotations', badge: '3', group: 'Main topics', label: 'Rotations',
+    title: 'Orientation: rotation matrices',
+    learn: () => `
+<p class="goal"><b>Big idea.</b> A rotation matrix is just a list of where a frame's three arrows point.</p>
+<h3>Three columns, three arrows</h3>
+<p>To describe how {b} is turned relative to {s}, write down where {b}'s x, y and z arrows point, using {s}'s coordinates. Put them side by side as the three columns of a 3&times;3 matrix, called ${R_('sb')}.</p>
+<div class="example"><b>Example: {b} is {s} turned 90&deg; about z</b>
+<p>{b}'s x arrow points along {s}'s y, so its column is (0, 1, 0). Its y arrow points along minus x, so (&minus;1, 0, 0). Its z arrow is unchanged: (0, 0, 1).</p>
+<div class="mxrow">${R_('sb')} = ${mx(Z90, { cols: true })}</div></div>
+<div class="viz" data-viz="rot"></div>
+<div class="callout try"><b class="t">Try it</b>Press "Rot z 90&deg;" and compare with the matrix above. Press "Rot x 90&deg;": the x column stays (1, 0, 0), because x is the axis you turned about.</div>
+<h3>Good to know</h3>
+<ul>
+<li><b>Undo a rotation by flipping the matrix</b> over its diagonal (the transpose, written <i class="v">R</i><sup>T</sup>). No hard inversion needed.</li>
+<li><b>Rotations never stretch</b> anything. Lengths and angles stay the same.</li>
+<li>Mathematicians call these matrices <b>SO(3)</b>. You can ignore the name for now.</li>
+</ul>`
+  },
+  /* ---------------------------------------------------------------- 4 */
+  {
+    id: 'compose', badge: '4', group: 'Main topics', label: 'Composing',
+    title: 'Changing frames and composing rotations',
+    learn: () => `
+<p class="goal"><b>Big idea.</b> A rotation matrix translates numbers from one frame into another, and chaining rotations means multiplying matrices. Order matters.</p>
+<h3>Translating between frames</h3>
+<p>${R_('sb')} turns {b}-numbers into {s}-numbers:</p>
+<div class="key">${P_('s')} = ${R_('sb')} ${P_('b')}</div>
+<p>To go the other way, use the transpose: ${P_('b')} = ${R_('sb')}<sup>T</sup> ${P_('s')}.</p>
+<div class="callout tip"><b class="t">Neighbours cancel</b>In ${R_('sb')} ${P_('b')}, the two <i class="v">b</i>'s sit next to each other and cancel, leaving <i class="v">s</i>. If they don't cancel, something is wrong.</div>
+<h3>Chaining</h3>
+<p>If you know how {b} sits in {a} and how {c} sits in {b}, multiply:</p>
+<div class="key">${R_('ac')} = ${R_('ab')} ${R_('bc')}</div>
+<h3>Order matters</h3>
+<p>Take a book. Turn it 90&deg; about x, then 90&deg; about z. Now reset and do z first, then x. The book ends up in different positions. Following the x arrow: in the first order it ends up along y, in the second it ends up along z.</p>
+<div class="callout"><b class="t">A handy rule</b>Add a new turn about the <b>world's</b> axes by multiplying on the <b>left</b>. Add a new turn about the <b>object's own</b> axes by multiplying on the <b>right</b>.</div>`
+  },
+  /* ---------------------------------------------------------------- 5 */
+  {
+    id: 'transforms', badge: '5', group: 'Main topics', label: 'Transforms',
+    title: 'Position plus orientation: homogeneous transforms',
+    learn: () => `
+<p class="goal"><b>Big idea.</b> Pack rotation and position into one 4&times;4 matrix <i class="v">T</i>. Then a full pose is a single object and chaining poses is just multiplying.</p>
+<h3>Rotate, then shift</h3>
+<p>To convert a point from {b} to {s}, rotate it, then add the position of {b}'s origin:</p>
+<div class="key">${P_('s')} = ${R_('sb')} ${P_('b')} + ${P_('sb')}</div>
+<p>The trick: add a 1 to the end of every point, and put <i class="v">R</i> and <i class="v">p</i> into one matrix. Multiplying does both jobs at once.</p>
+<div class="mxrow">${T_('sb')} = ${mx([['<i class="v">R</i>', '<i class="v">p</i>'], ['0 0 0', 1]], { sm: true })}</div>
+<div class="example"><b>Example</b>
+<p><i class="v">R</i> turns 90&deg; about z and <i class="v">p</i> = (2, 1, 0). The point (1, 0, 0) in {b}: rotate it to (0, 1, 0), then add (2, 1, 0).</p>
+<div class="key">${P_('s')} = (2, 2, 0)</div></div>
+<h3>Two rules</h3>
+<ul>
+<li><b>Chain:</b> ${T_('ac')} = ${T_('ab')} ${T_('bc')}. Neighbours cancel, as before.</li>
+<li><b>Undo:</b> the inverse is <i class="v">not</i> the transpose. It is <i class="v">R</i><sup>T</sup> in the rotation block and &minus;<i class="v">R</i><sup>T</sup><i class="v">p</i> as the position: undo the shift, then undo the turn.</li>
+</ul>
+<p>These 4&times;4 matrices are called <b>SE(3)</b>. Again, the name is optional.</p>`
+  },
+  /* ---------------------------------------------------------------- 6 */
+  {
+    id: 'chains', badge: '6', group: 'Application', label: 'Arm chains',
+    title: 'Chaining transforms along a robot arm',
+    learn: () => `
+<p class="goal"><b>Big idea.</b> A robot arm is a chain of frames. Multiply one transform per link, from the base to the tool, to find where the tool is.</p>
+<h3>One transform per link</h3>
+<p>Give every link a frame: {0} on the base, up to {3} on the tool. ${T_('01')} says where frame 1 is, seen from frame 0, and it depends only on joint 1. Then</p>
+<div class="key">${T_('03')} = ${T_('01')} ${T_('12')} ${T_('23')}</div>
+<div class="example"><b>Example: two links of length 1</b>
+<p>Joint 1 turns 90&deg;, joint 2 turns &minus;90&deg;. The first link points up: tip at (0, 1). The second link is turned back by 90&deg;, so it points right: it adds (1, 0).</p>
+<div class="key">tool position = (0, 1) + (1, 0) = (1, 1)</div></div>
+<div class="viz" data-viz="chain"></div>
+<div class="callout try"><b class="t">Try it</b>Move only &theta;<sub>1</sub>. Every frame after joint 1 swings with it. Now set &theta;<sub>2</sub> and &theta;<sub>3</sub> to 0: the arm is a straight line.</div>
+<h3>Useful consequences</h3>
+<ul>
+<li><b>A point on the tool</b> (a fingertip): multiply its coordinates by ${T_('03')} to get them in the base frame.</li>
+<li><b>The base seen from the tool:</b> use the inverse, ${T_('30')} = ${T_('03')}<sup>&minus;1</sup>.</li>
+<li><b>Real 3D arms</b> use the same idea with more general link frames. That is forward kinematics, a good next guide.</li>
+</ul>`
+  },
+  /* ---------------------------------------------------------------- 7 */
+  {
+    id: 'practice', badge: 'P', group: 'Extras', label: 'Practice', kind: 'practice',
+    title: 'Practice: 12 mixed questions',
+    intro: () => `
+<p class="goal"><b>How to use this.</b> Try each question on paper first, then pick an answer. A short worked solution appears afterwards, with a link back to the step if you need it.</p>
+<table class="t"><tr><th colspan="2">Cheat sheet</th></tr>
+<tr><td>Change frame</td><td>${P_('s')} = ${R_('sb')} ${P_('b')} &nbsp; (other way: transpose)</td></tr>
+<tr><td>Chain</td><td>${R_('ac')} = ${R_('ab')} ${R_('bc')}, &nbsp; ${T_('ac')} = ${T_('ab')} ${T_('bc')}</td></tr>
+<tr><td>Pose</td><td>${P_('s')} = ${R_('sb')} ${P_('b')} + ${P_('sb')}, packed into one 4&times;4 matrix ${T_('sb')}</td></tr>
+<tr><td>Rotating a frame</td><td>about world axes: new turn on the left. About own axes: on the right.</td></tr></table>`
+  },
+  /* ---------------------------------------------------------------- 8 */
+  {
+    id: 'final', badge: 'Q', group: 'Extras', label: 'Final quiz', kind: 'final',
+    title: 'Final quiz',
+    intro: () => `<p class="goal"><b>Six questions</b> on the main ideas. No pass mark. A wrong answer links back to the step that explains it.</p>`
+  }
+];
+
+/* Quiz data (simple version). c = correct option, w = wrong options, why = short explanation, rev = step id to review */
+const mi = rows => mx(rows, { sm: true });
+const QZ = {
+  frames: [
+    { q: 'Which best describes a frame?',
+      c: 'A starting point (origin) plus three perpendicular arrows: x, y and z', w: ['Three numbers (x, y, z)', 'A starting point only', 'Any three directions, even if they are not at right angles'],
+      why: 'A frame is an origin plus three perpendicular axes. Three numbers are a <i>position inside</i> a frame, not the frame itself.' },
+    { q: '{b} is glued to a gripper that moves around. A screw is fixed to the gripper. What happens to the screw\'s coordinates in {b}?',
+      c: 'They never change', w: ['They change whenever the gripper moves', 'They are always zero', 'They always equal its coordinates in {s}'],
+      why: 'The body frame rides along with the gripper, so a point fixed on the gripper always has the same {b} numbers. Its {s} numbers are the ones that change.' }
+  ],
+  points: [
+    { q: '{b} has the same directions as {s}, with its origin at (1, 2, 0). A point is at (4, 6, 1) in {s}. What are its {b} coordinates?',
+      c: '(3, 4, 1)', w: ['(5, 8, 1)', '(−3, −4, −1)', '(4, 6, 1)'],
+      why: 'Just subtract the origin: (4 &minus; 1, 6 &minus; 2, 1 &minus; 0) = (3, 4, 1). Adding instead gives (5, 8, 1).' },
+    { q: 'A point sits still on a table and you turn frame {b}. What changes?',
+      c: 'The point\'s numbers in {b}. The point itself does not move', w: ['The point moves', 'The point\'s numbers in {s}', 'Nothing changes'],
+      why: 'Coordinates are an address in a chosen frame. Turning {b} changes the address in {b}, not the place.' }
+  ],
+  rotations: [
+    { q: `${R_('sb')} = ${mi(Z90)}. Where does the x arrow of {b} point, written in {s}?`,
+      c: '(0, 1, 0), along the y axis of {s}', w: ['(−1, 0, 0)', '(1, 0, 0)', '(0, 0, 1)'],
+      why: 'The columns of the matrix are the arrows of {b}. The first column is (0, 1, 0).' },
+    { q: 'How do you undo a rotation matrix <i class="v">R</i>?',
+      c: 'Flip it over its diagonal (the transpose)', w: ['Multiply it by &minus;1', 'Square it', 'You cannot undo a rotation'],
+      why: 'For rotation matrices the transpose is the inverse, so undoing a rotation is easy.' }
+  ],
+  compose: [
+    { q: `You know ${R_('ab')} and ${R_('bc')}. Which gives ${R_('ac')}?`,
+      c: `${R_('ab')} ${R_('bc')}`, w: [`${R_('bc')} ${R_('ab')}`, `${R_('ab')} + ${R_('bc')}`, `${R_('ab')} &minus; ${R_('bc')}`],
+      why: `Neighbours cancel: <i class="v">ab</i> next to <i class="v">bc</i> leaves <i class="v">ac</i>. Rotations are multiplied, never added.` },
+    { q: 'You turn an object about its <b>own</b> axes by <i class="v">Q</i>. Where does <i class="v">Q</i> go in the product?',
+      c: `On the right: ${R_('sb')} <i class="v">Q</i>`, w: [`On the left: <i class="v">Q</i> ${R_('sb')}`, `Added: ${R_('sb')} + <i class="v">Q</i>`, 'It makes no difference'],
+      why: 'Own axes: multiply on the right. World axes: multiply on the left. The two give different results.' }
+  ],
+  transforms: [
+    { q: `<i class="v">R</i> turns 90&deg; about z and <i class="v">p</i> = (2, 1, 0). Where is the point (1, 0, 0) of {b} in {s}?`,
+      c: '(2, 2, 0)', w: ['(3, 1, 0)', '(0, 1, 0)', '(2, 0, 0)'],
+      why: 'Rotate first: (1, 0, 0) becomes (0, 1, 0). Then add the position (2, 1, 0) to get (2, 2, 0). (3, 1, 0) forgets the rotation, (0, 1, 0) forgets the shift.' },
+    { q: 'Why pack the rotation and the position into one 4&times;4 matrix?',
+      c: 'A whole pose becomes one object, and chaining poses is just multiplying', w: ['It makes rotations quicker to draw', 'It removes the need for frames', 'It makes the position disappear'],
+      why: 'With one matrix per pose, "rotate then shift" becomes a single multiplication, and several poses chain by multiplying their matrices.' }
+  ],
+  chains: [
+    { q: 'Which gives the tool frame {3} as seen from the base frame {0}?',
+      c: `${T_('01')} ${T_('12')} ${T_('23')}`, w: [`${T_('23')} ${T_('12')} ${T_('01')}`, `${T_('01')} + ${T_('12')} + ${T_('23')}`, `${T_('10')} ${T_('21')} ${T_('32')}`],
+      why: 'Multiply from the base to the tool. The neighbouring numbers cancel: 01, 12, 23 leaves 03.' },
+    { q: 'Only joint 1 turns. What happens to the frames after it?',
+      c: 'They all swing with it, but each link\'s transform to its neighbour stays the same', w: ['Only frame 1 moves', 'Nothing else moves', 'Only the tool moves'],
+      why: 'Everything downstream of joint 1 is carried along. Each link\'s own transform depends only on its own joint, so it does not change.' }
+  ],
+  /* ------------------------------------------------ practice: 12 */
+  practice: [
+    { rev: 'frames', q: 'Swap the y and z axes of a right-handed frame. What do you get?',
+      c: 'A left-handed frame (a mirror image)', w: ['Another right-handed frame', 'The same frame with a new origin', 'Not a frame at all'],
+      why: 'Swapping any two axes makes a mirror image. It is still a frame, but left-handed, so we avoid it.' },
+    { rev: 'points', q: '{b} has the same directions as {s}, with origin at (&minus;1, 3, 2). A point is at (2, 2, 2) in {s}. Its {b} coordinates?',
+      c: '(3, −1, 0)', w: ['(1, 5, 4)', '(−3, 1, 0)', '(3, 1, 0)'],
+      why: 'Subtract the origin: (2 &minus; (&minus;1), 2 &minus; 3, 2 &minus; 2) = (3, &minus;1, 0). Take care with the double minus.' },
+    { rev: 'rotations', q: `${R_('sb')} = ${mi(Z90)}. Where does the y arrow of {b} point, written in {s}?`,
+      c: '(−1, 0, 0)', w: ['(0, 1, 0)', '(0, −1, 0)', '(0, 0, 1)'],
+      why: 'The second column is the y arrow of {b}: (&minus;1, 0, 0). (0, 1, 0) is the first column, the x arrow.' },
+    { rev: 'compose', q: `${R_('sb')} = ${mi(Z90)} and a point is at (1, 2, 3) in {s}. Find its {b} coordinates.`,
+      c: '(2, −1, 3)', w: ['(−2, 1, 3)', '(1, 2, 3)', '(2, 1, 3)'],
+      why: `Going from {s} to {b} needs the transpose: ${R_('sb')}<sup>T</sup>(1, 2, 3) = (2, &minus;1, 3). Using ${R_('sb')} itself gives (&minus;2, 1, 3).` },
+    { rev: 'compose', q: `${R_('ab')} turns 90&deg; about z and ${P_('b')} = (1, 2, 3). Find ${P_('a')} = ${R_('ab')} ${P_('b')}.`,
+      c: '(−2, 1, 3)', w: ['(2, −1, 3)', '(−1, −2, 3)', '(−2, −1, 3)'],
+      why: 'A 90&deg; turn about z sends (x, y, z) to (&minus;y, x, z). So (1, 2, 3) becomes (&minus;2, 1, 3).' },
+    { rev: 'compose', q: `Which gives ${R_('ad')} when you know ${R_('ab')}, ${R_('bc')} and ${R_('cd')}?`,
+      c: `${R_('ab')} ${R_('bc')} ${R_('cd')}`, w: [`${R_('cd')} ${R_('bc')} ${R_('ab')}`, `${R_('ab')} ${R_('cd')} ${R_('bc')}`, `${R_('ab')} + ${R_('bc')} + ${R_('cd')}`],
+      why: 'Chain in order so the neighbours cancel: ab, bc, cd leaves ad.' },
+    { rev: 'compose', q: 'Turn an object 90&deg; about the world x axis, then 90&deg; about the world z axis. Where does the object\'s x arrow end up?',
+      c: 'Along y', w: ['Along z', 'Along x (it never moves)', 'Along &minus;y'],
+      why: 'The x arrow lies on the x axis, so the first turn leaves it alone. The turn about z then swings it from x to y. Doing the turns in the other order sends it along z instead.' },
+    { rev: 'transforms', q: `${T_('sb')} has a rotation of 90&deg; about x and a position of (0, 0, 5). A point is at (1, 2, 0) in {b}. Where is it in {s}?`,
+      c: '(1, 0, 7)', w: ['(1, 2, 5)', '(1, 0, 2)', '(1, 0, 3)'],
+      why: 'Rotate (1, 2, 0) by 90&deg; about x to get (1, 0, 2), then add (0, 0, 5) to get (1, 0, 7). (1, 2, 5) skips the rotation and (1, 0, 2) skips the shift.' },
+    { rev: 'transforms', q: `Which is the inverse of ${T_('sb')} = [ <i class="v">R</i> &nbsp; <i class="v">p</i> ; 0 0 0 1 ]?`,
+      c: '[ <i class="v">R</i><sup>T</sup> &nbsp; &minus;<i class="v">R</i><sup>T</sup><i class="v">p</i> ; 0 0 0 1 ]', w: ['The transpose of the whole 4&times;4 matrix', '[ <i class="v">R</i><sup>T</sup> &nbsp; <i class="v">p</i> ; 0 0 0 1 ]', '[ <i class="v">R</i> &nbsp; &minus;<i class="v">p</i> ; 0 0 0 1 ]'],
+      why: 'To undo "rotate, then shift", undo the shift first and then undo the turn. That gives <i class="v">R</i><sup>T</sup>(<i class="v">x</i> &minus; <i class="v">p</i>).' },
+    { rev: 'transforms', q: `${T_('ab')} has a 90&deg; turn about z and position (1, 0, 0). ${T_('bc')} has no turn and position (1, 0, 0). Where is the origin of {c} in {a}?`,
+      c: '(1, 1, 0)', w: ['(2, 0, 0)', '(0, 1, 0)', '(1, −1, 0)'],
+      why: 'Rotate the second position into {a}: (1, 0, 0) becomes (0, 1, 0). Add the first position (1, 0, 0) to get (1, 1, 0). Simply adding both positions, (2, 0, 0), forgets the turn.' },
+    { rev: 'chains', q: 'Planar arm, both links of length 1. Joint 1 turns 90&deg; and joint 2 turns &minus;90&deg;. Where is the tip?',
+      c: '(1, 1)', w: ['(0, 2)', '(−1, 1)', '(2, 0)'],
+      why: 'Link 1 points up: (0, 1). Link 2 is turned back by 90&deg;, so it points right: (1, 0). The tip is at (1, 1).' },
+    { rev: 'chains', q: `A camera sits on a gripper. ${T_('sb')} is the gripper's pose in the world and ${T_('bc')} is the camera's pose on the gripper. A point is seen at ${P_('c')}. Which gives it in the world frame?`,
+      c: `${T_('sb')} ${T_('bc')} ${P_('c')}`, w: [`${T_('bc')} ${T_('sb')} ${P_('c')}`, `${T_('sb')}<sup>&minus;1</sup> ${T_('bc')} ${P_('c')}`, `${T_('cb')} ${T_('bs')} ${P_('c')}`],
+      why: `${T_('bc')} takes camera numbers to gripper numbers, then ${T_('sb')} takes those to world numbers. Neighbours cancel: ${T_('sb')} ${T_('bc')}.` }
+  ],
+  /* ------------------------------------------------ final: 6 */
+  final: [
+    { rev: 'points', q: 'The same point is described in frames {s} and {b}. What is true?',
+      c: 'The coordinates differ, but it is the same point', w: ['The coordinates must be the same', 'It is two different points', 'Only one of the frames is correct'],
+      why: 'Coordinates depend on the frame. The place itself does not.' },
+    { rev: 'compose', q: 'Which converts coordinates from {b} to {s}?',
+      c: `${P_('s')} = ${R_('sb')} ${P_('b')}`, w: [`${P_('s')} = ${R_('sb')}<sup>T</sup> ${P_('b')}`, `${P_('s')} = ${P_('b')} &minus; ${R_('sb')}`, `${P_('b')} = ${R_('sb')} ${P_('s')}`],
+      why: `Neighbours cancel: <i class="v">sb</i> next to <i class="v">b</i> leaves <i class="v">s</i>. The transpose would go the other way, from {s} to {b}.` },
+    { rev: 'compose', q: 'Which statement about turning objects is right?',
+      c: 'Turning about x then z usually gives a different result than z then x', w: ['The order never matters', 'The order only matters in 2D', 'The order only matters for 180&deg; turns'],
+      why: 'Rotations in 3D do not commute. Try it with a book.' },
+    { rev: 'transforms', q: `What does the 4&times;4 matrix ${T_('sb')} contain?`,
+      c: 'Orientation (a rotation matrix) and position', w: ['Only orientation', 'Only position', 'Position in the rotation block and orientation in the last column'],
+      why: 'The top-left 3&times;3 block is the rotation and the last column is the position, with a bottom row of 0 0 0 1.' },
+    { rev: 'chains', q: 'Planar arm: link lengths 2 and 1, joint 1 at 90&deg;, joint 2 at &minus;90&deg;. Where is the tip?',
+      c: '(1, 2)', w: ['(2, 1)', '(0, 3)', '(−1, 2)'],
+      why: 'Link 1 points up: (0, 2). Link 2 is turned back by 90&deg; so it points right: (1, 0). Total: (1, 2).' },
+    { rev: 'chains', q: `You know ${T_('03')} and want the base as seen from the tool. What do you use?`,
+      c: `The inverse of ${T_('03')}`, w: [`The transpose of ${T_('03')}`, `Minus ${T_('03')}`, `${T_('03')} times itself`],
+      why: 'Swapping the viewpoint means inverting the pose. The inverse is not the plain transpose: the position part needs the extra &minus;<i class="v">R</i><sup>T</sup><i class="v">p</i> treatment.' }
+  ]
+};
+
+/* App: viewers (3 scenes), quiz engine, step map, routing, print mode */
+const PRINT = /[?&]print(\b|=)/.test(location.search);
+const ANSWERS = /[?&]answers(\b|=)/.test(location.search);
+const KEY = 'robotics-frames-guide-v1';
+const COL = { x: '#d9483a', y: '#2a9d5c', z: '#2f6fdb' };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+/* ---------- persisted state (best effort: storage can be unavailable) ---------- */
+let state = { ans: {}, seen: {} };
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.ans) state = s; } catch (_) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) {} };
+
+/* ---------- quiz preparation: deterministic option shuffle so letters are stable on screen and in print ---------- */
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hashStr(s) { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function prep(id, list) {
+  return list.map((it, i) => {
+    const rnd = mulberry(hashStr(id + '#' + i + '#v2'));
+    const o = [it.c, ...it.w].map((t, k) => ({ t, ok: k === 0 }));
+    for (let k = o.length - 1; k > 0; k--) { const j = Math.floor(rnd() * (k + 1)); [o[k], o[j]] = [o[j], o[k]]; }
+    return { q: it.q, opts: o.map(x => x.t), a: o.findIndex(x => x.ok), why: it.why, rev: it.rev || id };
+  });
+}
+STEPS.forEach((s, i) => { s.num = i + 1; s.qs = prep(s.id, QZ[s.id]); });
+const stepById = id => STEPS.find(s => s.id === id);
+const LET = 'ABCD';
+
+/* ---------- viewers ---------- */
+const VIZ = {};
+const slider = (k, label, min, max, val, step = 1, unit = '°') =>
+  `<label><span class="top"><span class="lt">${label}</span><output data-o="${k}" data-u="${unit}">${val}${unit}</output></span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-k="${k}"></label>`;
+const canvasHTML = () => {
+  const W = (!PRINT && window.innerWidth < 640) ? 720 : 1000, H = Math.round(W * 0.6);
+  return `<canvas width="${W}" height="${H}" aria-label="3D scene"></canvas>`;
+};
+function grid(S) {
+  for (let i = -3; i <= 3; i++) {
+    S.line([i, -3, 0], [i, 3, 0], { color: '#e3e7ee', w: 1, bg: true });
+    S.line([-3, i, 0], [3, i, 0], { color: '#e3e7ee', w: 1, bg: true });
+  }
+}
+function drawFrame(S, o, R, len, name, opt = {}) {
+  const cols = [COL.x, COL.y, COL.z], nm = ['x', 'y', 'z'];
+  for (let i = 0; i < 3; i++) {
+    const d = [R[0][i], R[1][i], R[2][i]];
+    S.arrow(o, V3.add(o, V3.mul(d, len)), { color: cols[i], w: opt.w || 3, alpha: opt.alpha ?? 1, head: opt.head });
+    if (opt.labels !== false) S.text(V3.add(o, V3.mul(d, len * 1.2)), nm[i], { color: cols[i], sub: name, size: opt.size || 30, alpha: opt.alpha ?? 1, bold: true });
+  }
+  S.dot(o, { r: 4.5, color: '#222', alpha: opt.alpha ?? 1 });
+  if (opt.tag !== false) {
+    const tagStyle = { size: 28, italic: false, bold: true, color: '#333', alpha: opt.alpha ?? 1 };
+    if (opt.labels !== false) S.text(V3.add(o, V3.mul([R[0][2], R[1][2], R[2][2]], len * 1.2)), '{' + name + '}', { ...tagStyle, dx: opt.tagdx || 0, dy: -38 });
+    else S.text(o, '{' + name + '}', { ...tagStyle, dx: opt.tdx ?? -28, dy: opt.tdy ?? 30 });
+  }
+}
+function drawBox(S, o, R, dim, color) {
+  const pts = [];
+  for (let i = 0; i < 8; i++) {
+    const c = [(i & 1) * dim[0], ((i >> 1) & 1) * dim[1], ((i >> 2) & 1) * dim[2]];
+    pts.push(V3.add(o, MT.mv(R, c)));
+  }
+  for (let i = 0; i < 8; i++) for (let b = 0; b < 3; b++) if (!(i & (1 << b))) S.line(pts[i], pts[i | (1 << b)], { color, w: 2.2, alpha: 0.85 });
+}
+const kv = (el, k) => +$(`[data-k="${k}"]`, el).value;
+function wireSliders(el, update) {
+  $$('input[type=range]', el).forEach(inp => inp.addEventListener('input', () => {
+    $(`[data-o="${inp.dataset.k}"]`, el).textContent = (+inp.value) + $(`[data-o="${inp.dataset.k}"]`, el).dataset.u;
+    update();
+  }));
+}
+function setSliders(el, vals) {
+  for (const k in vals) { const i = $(`[data-k="${k}"]`, el); i.value = vals[k]; const o = $(`[data-o="${k}"]`, el); o.textContent = vals[k] + o.dataset.u; }
+}
+const LIVECAP = 'Drag the scene to orbit it (touch: swipe sideways). Red = x, green = y, blue = z.';
+
+/* Scene 0: a single frame, right-handed vs left-handed */
+VIZ.basic = el => {
+  el.innerHTML = `${canvasHTML()}<div class="cap">Figure: a right-handed frame. Red = x, green = y, blue = z.</div><div class="cap live">${LIVECAP}</div>
+  <label class="chk"><input type="checkbox" data-k="flip"> Flip the z axis (make the frame left-handed)</label><div class="read"></div>`;
+  const read = $('.read', el);
+  const V = new Viewer($('canvas', el), S => {
+    const flip = $('[data-k="flip"]', el).checked;
+    grid(S);
+    drawFrame(S, [0, 0, 0], [[1, 0, 0], [0, 1, 0], [0, 0, flip ? -1 : 1]], 2, 's');
+    read.innerHTML = flip ? `Left-handed: ${XH} &times; ${YH} = &minus;${ZH}. Curl your <b>right</b> fingers from x to y: the thumb points up, but z points down.`
+      : `Right-handed: ${XH} &times; ${YH} = +${ZH}. Curl your right fingers from x to y and your thumb points along z.`;
+  }, { az: 32, el: 22, dist: 9.5, target: [0, 0, 0.8], focal: 1.25 });
+  $('[data-k="flip"]', el).addEventListener('change', () => V.draw());
+  V.draw();
+};
+
+/* Scene 1: rotate a frame, watch the matrix */
+VIZ.rot = el => {
+  const D = { a: 20, b: 15, g: 40 };
+  el.innerHTML = `${canvasHTML()}<div class="cap">Figure: frame {b} (bold) rotated relative to {s} (faint). The box is a rigid body attached to {b}.</div><div class="cap live">${LIVECAP}</div>
+  <div class="ctl">${slider('a', 'Rotation about x (&alpha;)', -180, 180, D.a)}${slider('b', 'Rotation about y (&beta;)', -180, 180, D.b)}${slider('g', 'Rotation about z (&gamma;)', -180, 180, D.g)}</div>
+  <div class="btns"><button class="btn" data-p="0,0,0">Reset</button><button class="btn" data-p="90,0,0">Rot x 90&deg;</button><button class="btn" data-p="0,90,0">Rot y 90&deg;</button><button class="btn" data-p="0,0,90">Rot z 90&deg;</button><button class="btn" data-p="view">Reset view</button></div>
+  <div class="read"></div>`;
+  const read = $('.read', el);
+  const getR = () => MT.mul(MT.Rz(MT.deg(kv(el, 'g'))), MT.mul(MT.Ry(MT.deg(kv(el, 'b'))), MT.Rx(MT.deg(kv(el, 'a')))));
+  const V = new Viewer($('canvas', el), S => {
+    const R = getR();
+    grid(S);
+    drawFrame(S, [0, 0, 0], MT.I3(), 1.9, 's', { alpha: 0.4, w: 2, head: 15 });
+    drawBox(S, [0, 0, 0], R, [1.2, 0.8, 0.5], '#7c7f96');
+    drawFrame(S, [0, 0, 0], R, 1.9, 'b', { w: 4 });
+    read.innerHTML = `<div class="mxrow" style="margin:0">${R_('sb')} = ${mx(R, { cols: true, fixed: true, d: 2, sm: true })}</div>
+      <div style="margin-top:6px;color:#5d677a">Each column is where one of {b}'s arrows points: red = x, green = y, blue = z.</div>`;
+  }, { az: 32, el: 24, dist: 9.5, target: [0, 0, 0.8], focal: 1.25 });
+  wireSliders(el, () => V.draw());
+  $$('.btn', el).forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.p === 'view') return V.resetView();
+    const [a, bb, g] = b.dataset.p.split(',').map(Number); setSliders(el, { a, b: bb, g }); V.draw();
+  }));
+  V.draw();
+};
+
+/* Scene 2: one point, two frames */
+VIZ.points = el => {
+  el.innerHTML = `${canvasHTML()}<div class="cap">Figure: point <i class="v">P</i> (orange) with frames {s} and {b}. Dashed lines run from each origin to <i class="v">P</i>.</div><div class="cap live">${LIVECAP}</div>
+  <div class="ctl">${slider('bx', 'Origin of {b}: x', -2, 3, 1.5, 0.1, '')}${slider('by', 'Origin of {b}: y', -2, 3, 1, 0.1, '')}${slider('yaw', 'Turn {b} about z', -180, 180, 35)}
+  ${slider('px', 'Point <i>P</i> in {s}: x', -3, 3, 2, 0.1, '')}${slider('py', 'Point <i>P</i> in {s}: y', -3, 3, 2.5, 0.1, '')}</div>
+  <div class="read"></div>`;
+  const read = $('.read', el);
+  const V = new Viewer($('canvas', el), S => {
+    const o = [kv(el, 'bx'), kv(el, 'by'), 0], R = MT.Rz(MT.deg(kv(el, 'yaw')));
+    const P = [kv(el, 'px'), kv(el, 'py'), 1];
+    const pb = MT.mv(MT.tr(R), V3.sub(P, o));
+    grid(S);
+    S.line(P, [P[0], P[1], 0], { color: '#9aa3b5', w: 1.5, dash: [4, 6] });
+    S.line([0, 0, 0], P, { color: '#4a5878', w: 2, dash: [10, 8] });
+    S.line(o, P, { color: '#e08a00', w: 2.4, dash: [10, 8] });
+    drawFrame(S, [0, 0, 0], MT.I3(), 1.4, 's');
+    drawFrame(S, o, R, 1.4, 'b', { tagdx: 44 });
+    S.dot(P, { r: 9, color: '#e08a00', ring: true });
+    S.text(P, 'P', { dx: -26, dy: 28, size: 34, bold: true, color: '#b86e00' });
+    const col = v => mx(v.map(x => [x]), { sm: true, fixed: true, d: 2 });
+    read.innerHTML = `<div class="mxrow" style="margin:0">${P_('s')} = ${col(P)} &nbsp;&nbsp; ${P_('b')} = ${col(pb)}</div>
+      <div style="margin-top:6px;color:#5d677a">Same point, two sets of numbers. Turn or move {b} and only ${P_('b')} changes.</div>`;
+  }, { az: 36, el: 28, dist: 10, target: [0.8, 0.8, 0.5], focal: 1.25 });
+  wireSliders(el, () => V.draw());
+  V.draw();
+};
+
+/* Scene 3: planar chain of three links */
+VIZ.chain = el => {
+  const L = [1.5, 1.2, 0.9];
+  el.innerHTML = `${canvasHTML()}<div class="cap">Figure: a planar arm with frames {0} to {3}. Link lengths ${L.join(', ')}. Frame {3} is the tool.</div><div class="cap live">${LIVECAP}</div>
+  <div class="ctl">${slider('t1', '&theta;<sub>1</sub> (joint 1)', -180, 180, 35)}${slider('t2', '&theta;<sub>2</sub> (joint 2)', -180, 180, -50)}${slider('t3', '&theta;<sub>3</sub> (joint 3)', -180, 180, 40)}</div>
+  <div class="read"></div>`;
+  const read = $('.read', el);
+  const link = (th, Li) => { const R = MT.Rz(th); return MT.T(R, [Li * Math.cos(th), Li * Math.sin(th), 0]); };
+  const V = new Viewer($('canvas', el), S => {
+    const th = ['t1', 't2', 't3'].map(k => MT.deg(kv(el, k)));
+    const Ts = [MT.I3().map((r, i) => [...r, 0]).concat([[0, 0, 0, 1]])];
+    for (let i = 0; i < 3; i++) Ts.push(MT.mul(Ts[i], link(th[i], L[i])));
+    grid(S);
+    for (let i = 0; i < 3; i++) {
+      const a = MT.Rp(Ts[i])[1], b = MT.Rp(Ts[i + 1])[1];
+      S.line(a, b, { color: '#7c8398', w: 7 });
+    }
+    for (let i = 0; i < 4; i++) {
+      const [R, p] = MT.Rp(Ts[i]);
+      drawFrame(S, p, R, i === 3 ? 0.75 : 0.55, String(i), { labels: false, w: 3, head: 15, tdx: 0, tdy: 40 });
+    }
+    for (let i = 0; i < 3; i++) S.dot(MT.Rp(Ts[i])[1], { r: 9, color: '#fff', ring: false });
+    for (let i = 0; i < 3; i++) S.dot(MT.Rp(Ts[i])[1], { r: 5, color: '#333' });
+    const T3 = Ts[3];
+    read.innerHTML = `<div class="mxrow" style="margin:0">${T_('03')} = ${mx(T3, { sm: true, fixed: true, d: 2, pcol: true })}</div>
+      <div style="margin-top:6px;color:#5d677a">The orange column is the tool's position in the base frame: (${fmtN(T3[0][3], 2, true)}, ${fmtN(T3[1][3], 2, true)}).</div>`;
+  }, { az: -90, el: 62, dist: 10, target: [1.6, 0.9, 0], focal: 1.7 });
+  wireSliders(el, () => V.draw());
+  V.draw();
+};
+
+const mountViz = root => $$('.viz[data-viz]', root).forEach(el => { if (!el.dataset.ready) { el.dataset.ready = 1; VIZ[el.dataset.viz](el); } });
+
+/* ---------- quiz engine ---------- */
+const answers = step => state.ans[step.id] || (state.ans[step.id] = Array(step.qs.length).fill(null));
+const isDone = step => answers(step).every(v => v !== null);
+const score = step => answers(step).reduce((n, v, i) => n + (v === step.qs[i].a ? 1 : 0), 0);
+
+function buildQuiz(box, step) {
+  const qs = step.qs, worked = step.kind === 'practice';
+  box.innerHTML = `<div class="qhead"><span>${qs.length} questions &middot; pick an answer for instant feedback</span><span class="score"></span></div><div class="qs"></div><div class="sumwrap"></div>`;
+  const qsEl = $('.qs', box);
+  qs.forEach((q, qi) => {
+    const d = document.createElement('div'); d.className = 'q';
+    d.innerHTML = `<div class="qt"><span class="n">${qi + 1}</span>${q.q}</div><div class="opts">${q.opts.map((o, oi) =>
+      `<button class="opt" data-o="${oi}"><span class="L">${LET[oi]}</span><span>${o}</span></button>`).join('')}</div><div class="fbwrap"></div>`;
+    qsEl.appendChild(d);
+    $$('.opt', d).forEach(b => b.addEventListener('click', () => {
+      const a = answers(step); if (a[qi] !== null) return;
+      a[qi] = +b.dataset.o; save(); paintQ(qi); paintTop(); updateMap();
+    }));
+  });
+  function paintQ(qi) {
+    const d = qsEl.children[qi], q = qs[qi], v = answers(step)[qi], fb = $('.fbwrap', d);
+    $$('.opt', d).forEach((b, oi) => {
+      b.disabled = v !== null;
+      b.classList.toggle('correct', v !== null && oi === q.a);
+      b.classList.toggle('wrong', v !== null && oi === v && v !== q.a);
+      b.classList.toggle('dim', v !== null && oi !== q.a && oi !== v);
+    });
+    if (v === null) { fb.innerHTML = ''; return; }
+    const ok = v === q.a, rs = stepById(q.rev);
+    fb.innerHTML = `<div class="fb ${ok ? 'ok' : 'no'}"><b>${ok ? 'Correct.' : 'Not quite.'}</b>${ok ? '' : ` The answer is <b>${LET[q.a]}</b>.`} ${worked ? '<b>Worked solution:</b> ' : ''}${q.why}${ok ? '' : `<br><a class="rv" href="#${rs.id}">Review step ${rs.num}: ${rs.title}</a>`}</div>`;
+  }
+  function paintTop() {
+    const a = answers(step), n = a.filter(v => v !== null).length;
+    $('.score', box).textContent = n ? `Score: ${score(step)} / ${n} answered` : '';
+    const sw = $('.sumwrap', box);
+    if (n < qs.length) { sw.innerHTML = ''; return; }
+    const miss = [...new Set(qs.filter((q, i) => a[i] !== q.a).map(q => q.rev))];
+    sw.innerHTML = `<div class="sum"><b>Finished: ${score(step)} out of ${qs.length}.</b> ${miss.length ? 'To review: ' + miss.map(id => `<a href="#${id}">Step ${stepById(id).num}</a>`).join(', ') + '.' : 'Nothing to review here.'}
+      <div class="btns" style="margin-top:8px"><button class="btn" data-act="retry">Try again</button></div></div>`;
+    $('[data-act=retry]', sw).addEventListener('click', () => { state.ans[step.id] = Array(qs.length).fill(null); save(); buildQuiz(box, step); updateMap(); });
+  }
+  qs.forEach((_, i) => paintQ(i)); paintTop();
+}
+
+/* ---------- screens, routing ---------- */
+const SCREENS = [];
+STEPS.forEach(s => { if (s.kind) SCREENS.push({ s, part: 'single' }); else { SCREENS.push({ s, part: 'learn' }); SCREENS.push({ s, part: 'quiz' }); } });
+const hashOf = sc => '#' + sc.s.id + (sc.part === 'quiz' ? '/quiz' : '');
+function curIndex() {
+  const [id, part] = location.hash.replace(/^#/, '').split('/');
+  const i = SCREENS.findIndex(sc => sc.s.id === id && (sc.part === 'single' || sc.part === (part === 'quiz' ? 'quiz' : 'learn')));
+  return i < 0 ? 0 : i;
+}
+const stage = () => $('#stage');
+let firstRender = true;
+
+function render() {
+  const idx = curIndex(), sc = SCREENS[idx], s = sc.s;
+  const tag = sc.part === 'single' ? s.title.split(':')[0] : `Step ${s.num} · ${sc.part === 'learn' ? 'Learn' : 'Quiz'}`;
+  if (sc.part === 'learn') {
+    stage().innerHTML = `<section class="card"><span class="stepno">${tag}</span><h2>${s.title}</h2>${s.learn()}</section>`;
+    mountViz(stage());
+    state.seen[s.id] = true; save();
+  } else if (sc.part === 'quiz') {
+    stage().innerHTML = `<section class="card"><span class="stepno">${tag}</span><h2>Check your understanding</h2><p class="lede" style="margin-bottom:6px">${s.title}</p><div id="qbox"></div></section>`;
+    buildQuiz($('#qbox'), s);
+    state.seen[s.id + '/quiz'] = true; save();
+  } else {
+    stage().innerHTML = `<section class="card"><span class="stepno">${tag}</span><h2>${s.title}</h2>${s.intro()}<div id="qbox"></div></section>`;
+    buildQuiz($('#qbox'), s);
+    state.seen[s.id] = true; save();
+  }
+  updateMap(); updatePager(idx);
+  if (!firstRender) window.scrollTo(0, Math.max(0, $('#map').offsetTop + $('#map').offsetHeight - 6));
+  firstRender = false;
+}
+function go(i) { if (i >= 0 && i < SCREENS.length) location.hash = hashOf(SCREENS[i]); }
+function updatePager(idx) {
+  const sc = SCREENS[idx];
+  $('#back').disabled = idx === 0;
+  const nx = $('#next'); nx.disabled = idx === SCREENS.length - 1;
+  nx.textContent = idx === SCREENS.length - 1 ? 'Done' : (sc.part === 'learn' ? 'Quiz' : 'Next');
+  $('#pos').textContent = sc.part === 'single' ? sc.s.label : `Step ${sc.s.num} · ${sc.part === 'learn' ? 'Learn' : 'Quiz'}`;
+}
+
+/* ---------- step map ---------- */
+function buildMap() {
+  const groups = [...new Set(STEPS.map(s => s.group))];
+  $('#map').innerHTML = `<div class="prog"><div></div></div><div class="progtxt"></div><div class="map">` + groups.map(g =>
+    `<div class="grp"><div class="gl">${g}</div><div class="nodes">` + STEPS.filter(s => s.group === g).map(s =>
+      `<button class="node" data-id="${s.id}" aria-label="${s.title}"><span class="bdg">${s.badge}</span><span class="ck">✓</span><span class="nl">${s.label}</span><span class="dots"><i></i>${s.kind ? '' : '<i></i>'}</span></button>`).join('') + `</div></div>`).join('') + `</div>`;
+  $$('.node').forEach(n => n.addEventListener('click', () => { location.hash = '#' + n.dataset.id; }));
+}
+function updateMap() {
+  const cur = SCREENS[curIndex()].s.id;
+  let done = 0;
+  $$('.node').forEach(n => {
+    const s = stepById(n.dataset.id), d = isDone(s);
+    if (d) done++;
+    n.classList.toggle('cur', s.id === cur); n.classList.toggle('done', d);
+    const dots = $$('.dots i', n);
+    if (s.kind) dots[0].classList.toggle('on', answers(s).some(v => v !== null));
+    else { dots[0].classList.toggle('on', !!state.seen[s.id]); dots[1].classList.toggle('on', d); }
+  });
+  $('.prog>div').style.width = (done / STEPS.length * 100) + '%';
+  $('.progtxt').textContent = `${done} of ${STEPS.length} steps done`;
+  const c = $('.node.cur'); const m = $('.map');
+  if (c && m && m.scrollWidth > m.clientWidth) m.scrollLeft = c.offsetLeft - m.clientWidth / 2 + c.offsetWidth / 2;
+}
+
+/* ---------- print mode ---------- */
+function renderPrint() {
+  document.body.classList.add('print');
+  $('#pager').remove(); $('#map').remove();
+  const q2html = (s) => s.qs.map((q, i) => `<div class="pq"><b>${i + 1}.</b> ${q.q}<ol>${q.opts.map(o => `<li>${o}</li>`).join('')}</ol></div>`).join('');
+  let h = STEPS.map(s => `<section class="card pstep${s.kind ? ' brk' : ''}"><h2>${s.kind ? s.title : `Step ${s.num}: ${s.title}`}</h2>${s.kind ? s.intro() : s.learn()}<h3>${s.kind ? 'Questions' : `Quiz: step ${s.num}`}</h3>${q2html(s)}</section>`).join('');
+  if (ANSWERS) {
+    h += `<section class="card pstep brk key-ans"><h2>Instructor answer key</h2>` + STEPS.map(s =>
+      `<h3>${s.kind ? s.title : `Step ${s.num}: ${s.title}`}</h3>` + s.qs.map((q, i) =>
+        `<p><b>${i + 1}. ${LET[q.a]}.</b> ${s.kind === 'practice' ? '<b>Worked solution:</b> ' : ''}${q.why}</p>`).join('')).join('') + `</section>`;
+  }
+  stage().innerHTML = h;
+  mountViz(stage());
+}
+
+/* ---------- boot ---------- */
+if (PRINT) renderPrint();
+else {
+  buildMap();
+  $('#back').addEventListener('click', () => go(curIndex() - 1));
+  $('#next').addEventListener('click', () => go(curIndex() + 1));
+  window.addEventListener('hashchange', render);
+  document.addEventListener('keydown', e => {
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || ''))) return;
+    if (e.key === 'ArrowRight') go(curIndex() + 1); else if (e.key === 'ArrowLeft') go(curIndex() - 1);
+  });
+  render();
+}
+
+</script>
+</body>
+</html>
